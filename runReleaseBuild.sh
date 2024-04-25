@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --add-data "bin;bin/" main.py
