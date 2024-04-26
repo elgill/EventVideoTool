@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLin
     QWidget
 import ffmpeg
 
-from ConcatenationThread import ConcatenationThread
+from concatenation_thread import ConcatenationThread
 
 
 def open_video(video_path):

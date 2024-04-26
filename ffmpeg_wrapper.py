@@ -9,17 +9,7 @@ from tqdm import tqdm
 from ffmpeg_binaries import get_ffprobe_path
 
 
-class FfmpegProcess2:
-    """
-    Args:
-        command (list): A list of arguments to pass to FFmpeg.
-
-        ffmpeg_loglevel (str, optional): Desired FFmpeg log level. Default is "verbose".
-
-    Raises:
-        ValueError: If the list of arguments does not include "-i".
-    """
-
+class FfmpegWrapper:
     def __init__(self, command, ffmpeg_loglevel="verbose", expected_duration=0):
         if "-i" not in command:
             raise ValueError("FFmpeg command must include '-i'")
@@ -87,7 +77,7 @@ class FfmpegProcess2:
 
                 elif "speed" in ffmpeg_output:
                     speed_str = value[:-1]
-                    if speed_str != "0" and "N/A" not in ffmpeg_output:
+                    if speed_str != "0" and "N/A" not in value:
                         self._speed = float(speed_str)
 
                         if self._can_get_duration:

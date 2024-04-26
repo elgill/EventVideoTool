@@ -3,7 +3,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from ffmpeg import probe
 
 from ffmpeg_binaries import get_ffprobe_path, get_ffmpeg_path
-from ffmprogress import FfmpegProcess2
+from ffmpeg_wrapper import FfmpegWrapper
 
 
 class ConcatenationThread(QThread):
@@ -40,7 +40,7 @@ class ConcatenationThread(QThread):
                             print(f"Error reading video duration for {file}: {e}")
 
         print(f"Total Duration: {total_duration}")
-        process = FfmpegProcess2([
+        process = FfmpegWrapper([
             get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
         ], expected_duration=total_duration)
 
