@@ -9,6 +9,18 @@ import ffmpeg
 from ConcatenationThread import ConcatenationThread
 
 
+def open_video(video_path):
+    if os.path.exists(video_path):
+        if sys.platform == 'win32':
+            os.startfile(video_path)
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', video_path])
+        else:  # Linux variants
+            subprocess.run(['xdg-open', video_path])
+    else:
+        print(f"Error: Video file '{video_path}' not found.")
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -69,27 +81,17 @@ class MainWindow(QMainWindow):
         clip_dir = self.clip_dir_input.text()
 
         # Concatenate clips
-        concatenated_file = os.path.join(clip_dir, "concatenated_output.mp4")
+        concatenated_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
 
         # Start the concatenation thread
         self.concatenation_thread = ConcatenationThread(clip_dir, concatenated_file)
+        self.setup_connections()
         self.concatenation_thread.start()
 
     def show_preview(self):
         clip_dir = self.clip_dir_input.text()
-        video_file = os.path.join(clip_dir, "concatenated_output.mp4")
-        self.open_video(video_file)
-
-    def open_video(self, video_path):
-        if os.path.exists(video_path):
-            if sys.platform == 'win32':
-                os.startfile(video_path)
-            elif sys.platform == 'darwin':
-                subprocess.run(['open', video_path])
-            else:  # Linux variants
-                subprocess.run(['xdg-open', video_path])
-        else:
-            print(f"Error: Video file '{video_path}' not found.")
+        video_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
+        open_video(video_file)
 
     def trim_and_reencode(self):
         # Get input values
@@ -98,9 +100,9 @@ class MainWindow(QMainWindow):
         end_time = self.end_time_input.text()
 
         # Get file paths
-        concatenated_file = os.path.join(clip_dir, "concatenated_output.mp4")
-        trimmed_file = os.path.join(clip_dir, "trimmed_output.mp4")
-        youtube_file = os.path.join(clip_dir, "youtube_output.mp4")
+        concatenated_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
+        trimmed_file = os.path.join(clip_dir, "output/trimmed_output.mp4")
+        youtube_file = os.path.join(clip_dir, "output/youtube_output.mp4")
 
         # Check if the concatenated file exists
         if os.path.isfile(concatenated_file):
@@ -122,6 +124,25 @@ class MainWindow(QMainWindow):
         stream = ffmpeg.input(input_file)
         stream = ffmpeg.output(stream, output_file, codec="libx264", preset="fast", b="5M", an=True)
         ffmpeg.run(stream)
+    def setup_connections(self):
+        # Setup connections once the thread is created somewhere like in concat_videos
+        self.concatenation_thread.progress_update.connect(self.update_progress_bar)
+        self.concatenation_thread.progress_message.connect(self.display_progress_message)
+        self.concatenation_thread.finished.connect(self.process_finished)
+
+    def update_progress_bar(self, value):
+        #self.progress_bar.setValue(value)
+        pass
+
+    def display_progress_message(self, message):
+        self.statusBar().showMessage(message)
+
+    def process_finished(self, success, message):
+        self.statusBar().showMessage(message)
+        if success:
+            print("Operation Successful!")
+        else:
+            print("Operation Failed:", message)
 
 
 if __name__ == "__main__":
