@@ -2,7 +2,7 @@ import os
 from PyQt5.QtCore import QThread, pyqtSignal
 from ffmpeg import probe
 
-from ffmpeg_binaries import get_ffmpeg_binary
+from ffmpeg_binaries import get_ffprobe_path, get_ffmpeg_path
 from ffmprogress import FfmpegProcess2
 
 
@@ -33,7 +33,7 @@ class ConcatenationThread(QThread):
                         filelist.write(f"file '{file_path}'\n")
                         # Calculate duration of each file
                         try:
-                            video_info = probe(file_path)
+                            video_info = probe(file_path, cmd=get_ffprobe_path())
                             duration = float(video_info['format']['duration'])
                             total_duration += duration
                         except Exception as e:
@@ -41,7 +41,7 @@ class ConcatenationThread(QThread):
 
         print(f"Total Duration: {total_duration}")
         process = FfmpegProcess2([
-            get_ffmpeg_binary(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
+            get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
         ], expected_duration=total_duration)
 
         process.run(progress_handler=self.handle_progress_info, success_handler=self.handle_success,

@@ -6,6 +6,8 @@ import sys
 from ffmpeg import probe
 from tqdm import tqdm
 
+from ffmpeg_binaries import get_ffprobe_path
+
 
 class FfmpegProcess2:
     """
@@ -43,7 +45,7 @@ class FfmpegProcess2:
         self._can_get_duration = True
 
         try:
-            self._duration_secs = float(probe(self._filepath)["format"]["duration"])
+            self._duration_secs = float(probe(self._filepath, cmd=get_ffprobe_path())["format"]["duration"])
             print(
                 f"The duration of {self._filepath} has been detected as {self._duration_secs} seconds."
             )
@@ -112,6 +114,8 @@ class FfmpegProcess2:
         if ffmpeg_output_file is None:
             os.makedirs("ffmpeg_output", exist_ok=True)
             ffmpeg_output_file = os.path.join("ffmpeg_output", f"[{Path(self._filepath).name}].txt")
+
+        print(self._ffmpeg_args)
 
         with open(ffmpeg_output_file, "a") as f:
             process = subprocess.Popen(self._ffmpeg_args, stdout=subprocess.PIPE, stderr=f)
