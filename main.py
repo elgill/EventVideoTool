@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLin
 import ffmpeg
 
 from concatenation_thread import ConcatenationThread
+from reencode_thread import ReencodeThread
+from trim_thread import TrimThread
 
 
 def open_video(video_path):
@@ -24,6 +26,14 @@ def open_video(video_path):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.reencode_thread = None
+        self.trim_thread = None
+        self.clip_dir = None
+        self.end_time = None
+        self.start_time = None
+        self.youtube_file = None
+        self.trimmed_file = None
+        self.concatenated_file = None
         self.concatenation_thread = None
         self.setWindowTitle("Video Trimming and Concatenation Tool")
         self.setGeometry(100, 100, 400, 300)
@@ -34,8 +44,11 @@ class MainWindow(QMainWindow):
         self.clip_dir_button = QPushButton("Browse")
         self.clip_dir_button.clicked.connect(self.browse_clip_dir)
 
-        self.trim_button = QPushButton("Trim and Re-encode")
-        self.trim_button.clicked.connect(self.trim_and_reencode)
+        self.trim_button = QPushButton("Trim and Mute")
+        self.trim_button.clicked.connect(self.trim_and_mute)
+        
+        self.re_encode_button = QPushButton("Re-encode")
+        self.re_encode_button.clicked.connect(self.re_encode_for_youtube)
 
         self.start_time_label = QLabel("Start Time (HH:MM:SS):")
         self.start_time_input = QLineEdit()
@@ -43,8 +56,8 @@ class MainWindow(QMainWindow):
         self.end_time_label = QLabel("End Time (HH:MM:SS):")
         self.end_time_input = QLineEdit()
 
-        self.process_button = QPushButton("Concat Videos")
-        self.process_button.clicked.connect(self.concat_videos)
+        self.concat_button = QPushButton("Concat Videos")
+        self.concat_button.clicked.connect(self.concat_videos)
 
         self.preview_button = QPushButton("Preview Video")
         self.preview_button.clicked.connect(self.show_preview)
@@ -54,7 +67,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.clip_dir_label)
         layout.addWidget(self.clip_dir_input)
         layout.addWidget(self.clip_dir_button)
-        layout.addWidget(self.process_button)
+        layout.addWidget(self.concat_button)
         layout.addWidget(self.preview_button)
 
         # In the layout
@@ -64,7 +77,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.end_time_input)
 
         layout.addWidget(self.trim_button)
-        layout.addWidget(self.process_button)
+        layout.addWidget(self.re_encode_button)
 
         # Create central widget and set layout
         central_widget = QWidget()
@@ -77,53 +90,42 @@ class MainWindow(QMainWindow):
             self.clip_dir_input.setText(directory)
 
     def concat_videos(self):
-        # Get input values
-        clip_dir = self.clip_dir_input.text()
-
-        # Concatenate clips
-        concatenated_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
+        self.set_fields()
 
         # Start the concatenation thread
-        self.concatenation_thread = ConcatenationThread(clip_dir, concatenated_file)
+        self.concatenation_thread = ConcatenationThread(self.clip_dir, self.concatenated_file)
         self.setup_connections()
         self.concatenation_thread.start()
 
     def show_preview(self):
-        clip_dir = self.clip_dir_input.text()
-        video_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
-        open_video(video_file)
+        self.set_fields()
+        open_video(self.concatenated_file)
 
-    def trim_and_reencode(self):
+    def set_fields(self):
         # Get input values
-        clip_dir = self.clip_dir_input.text()
-        start_time = self.start_time_input.text()
-        end_time = self.end_time_input.text()
+        self.clip_dir = self.clip_dir_input.text()
+        self.start_time = self.start_time_input.text()
+        self.end_time = self.end_time_input.text()
 
         # Get file paths
-        concatenated_file = os.path.join(clip_dir, "output/concatenated_output.mp4")
-        trimmed_file = os.path.join(clip_dir, "output/trimmed_output.mp4")
-        youtube_file = os.path.join(clip_dir, "output/youtube_output.mp4")
+        self.concatenated_file = os.path.join(self.clip_dir, "output/concatenated_output.mp4")
+        self.trimmed_file = os.path.join(self.clip_dir, "output/trimmed_output.mp4")
+        self.youtube_file = os.path.join(self.clip_dir, "output/youtube_output.mp4")
 
-        # Check if the concatenated file exists
-        if os.path.isfile(concatenated_file):
-            # Trim and mute the concatenated video
-            self.trim_and_mute(concatenated_file, trimmed_file, start_time, end_time)
+    def trim_and_mute(self, ):
+        self.set_fields()
+        # Start the concatenation thread
+        self.trim_thread = TrimThread(self.concatenated_file, self.trimmed_file, self.start_time, self.end_time)
+        self.setup_connections()
+        self.trim_thread.start()
 
-            # Re-encode for YouTube
-            self.re_encode_for_youtube(trimmed_file, youtube_file)
-        else:
-            print(f"Error: Concatenated file '{concatenated_file}' not found.")
-
-    def trim_and_mute(self, input_file, output_file, start_time, end_time):
-        stream = ffmpeg.input(input_file)
-        stream = ffmpeg.trim(stream, start=start_time, end=end_time)
-        stream = ffmpeg.output(stream, output_file, codec="copy", an=True)
-        ffmpeg.run(stream, overwrite_output=True)
-
-    def re_encode_for_youtube(self, input_file, output_file):
-        stream = ffmpeg.input(input_file)
-        stream = ffmpeg.output(stream, output_file, codec="libx264", preset="fast", b="5M", an=True)
-        ffmpeg.run(stream)
+    def re_encode_for_youtube(self):
+        self.set_fields()
+        # Start the concatenation thread
+        self.reencode_thread = ReencodeThread(self.trimmed_file, self.youtube_file)
+        self.setup_connections()
+        self.reencode_thread.start()
+        
     def setup_connections(self):
         # Setup connections once the thread is created somewhere like in concat_videos
         self.concatenation_thread.progress_update.connect(self.update_progress_bar)
