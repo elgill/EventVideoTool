@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
 
         # Start the concatenation thread
         self.concatenation_thread = ConcatenationThread(self.clip_dir, self.concatenated_file)
-        self.setup_connections()
+        self.setup_connections(self.concatenation_thread)
         self.concatenation_thread.start()
 
     def show_preview(self):
@@ -116,21 +116,21 @@ class MainWindow(QMainWindow):
         self.set_fields()
         # Start the concatenation thread
         self.trim_thread = TrimThread(self.concatenated_file, self.trimmed_file, self.start_time, self.end_time)
-        self.setup_connections()
+        self.setup_connections(self.trim_thread)
         self.trim_thread.start()
 
     def re_encode_for_youtube(self):
         self.set_fields()
         # Start the concatenation thread
         self.reencode_thread = ReencodeThread(self.trimmed_file, self.youtube_file)
-        self.setup_connections()
+        self.setup_connections(self.reencode_thread)
         self.reencode_thread.start()
         
-    def setup_connections(self):
+    def setup_connections(self, thread):
         # Setup connections once the thread is created somewhere like in concat_videos
-        self.concatenation_thread.progress_update.connect(self.update_progress_bar)
-        self.concatenation_thread.progress_message.connect(self.display_progress_message)
-        self.concatenation_thread.finished.connect(self.process_finished)
+        thread.progress_update.connect(self.update_progress_bar)
+        thread.progress_message.connect(self.display_progress_message)
+        thread.finished.connect(self.process_finished)
 
     def update_progress_bar(self, value):
         #self.progress_bar.setValue(value)

@@ -62,7 +62,8 @@ class FfmpegWrapper:
                 if "total_size" in ffmpeg_output and "N/A" not in value:
                     self._current_size = int(value)
 
-                elif "out_time_ms" in ffmpeg_output:
+                elif "out_time_ms" in ffmpeg_output and "N/A" not in value:
+                    #ERROR here
                     self._seconds_processed = int(value) / 1_000_000
 
                     if self._can_get_duration:
