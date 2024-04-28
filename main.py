@@ -26,6 +26,7 @@ def open_video(video_path):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.output_dir = None
         self.reencode_thread = None
         self.trim_thread = None
         self.clip_dir = None
@@ -43,6 +44,11 @@ class MainWindow(QMainWindow):
         self.clip_dir_input = QLineEdit()
         self.clip_dir_button = QPushButton("Browse")
         self.clip_dir_button.clicked.connect(self.browse_clip_dir)
+
+        self.output_dir_label = QLabel("Output Directory:")
+        self.output_dir_input = QLineEdit()
+        self.output_dir_button = QPushButton("Browse")
+        self.output_dir_button.clicked.connect(self.browse_output_dir)
 
         self.trim_button = QPushButton("Trim and Mute")
         self.trim_button.clicked.connect(self.trim_and_mute)
@@ -67,6 +73,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.clip_dir_label)
         layout.addWidget(self.clip_dir_input)
         layout.addWidget(self.clip_dir_button)
+
+        layout.addWidget(self.output_dir_label)
+        layout.addWidget(self.output_dir_input)
+        layout.addWidget(self.output_dir_button)
+
         layout.addWidget(self.concat_button)
         layout.addWidget(self.preview_button)
 
@@ -89,6 +100,11 @@ class MainWindow(QMainWindow):
         if directory:
             self.clip_dir_input.setText(directory)
 
+    def browse_output_dir(self):
+        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
+        if directory:
+            self.output_dir_input.setText(directory)
+
     def concat_videos(self):
         self.set_fields()
 
@@ -102,15 +118,14 @@ class MainWindow(QMainWindow):
         open_video(self.concatenated_file)
 
     def set_fields(self):
-        # Get input values
         self.clip_dir = self.clip_dir_input.text()
+        self.output_dir = self.output_dir_input.text()
         self.start_time = self.start_time_input.text()
         self.end_time = self.end_time_input.text()
 
-        # Get file paths
-        self.concatenated_file = os.path.join(self.clip_dir, "output/concatenated_output.mp4")
-        self.trimmed_file = os.path.join(self.clip_dir, "output/trimmed_output.mp4")
-        self.youtube_file = os.path.join(self.clip_dir, "output/youtube_output.mp4")
+        self.concatenated_file = os.path.join(self.output_dir, "concatenated_output.mp4")
+        self.trimmed_file = os.path.join(self.output_dir, "trimmed_output.mp4")
+        self.youtube_file = os.path.join(self.output_dir, "youtube_output.mp4")
 
     def trim_and_mute(self, ):
         self.set_fields()
