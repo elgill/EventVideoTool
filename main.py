@@ -51,15 +51,15 @@ class MainWindow(QMainWindow):
 
         self.trim_button = QPushButton("Trim and Mute")
         self.trim_button.clicked.connect(self.trim_and_mute)
-        
+
         self.re_encode_button = QPushButton("Re-encode")
         self.re_encode_button.clicked.connect(self.re_encode_for_youtube)
 
         self.start_time_label = QLabel("Start Time (HH:MM:SS):")
-        self.start_time_input = QLineEdit()
+        self.start_time_input = TimeLineEdit()
 
         self.end_time_label = QLabel("End Time (HH:MM:SS):")
-        self.end_time_input = QLineEdit()
+        self.end_time_input = TimeLineEdit()
 
         self.concat_button = QPushButton("Concat Videos")
         self.concat_button.clicked.connect(self.concat_videos)
@@ -139,7 +139,7 @@ class MainWindow(QMainWindow):
         self.reencode_thread = ReencodeThread(self.trimmed_file, self.youtube_file)
         self.setup_connections(self.reencode_thread)
         self.reencode_thread.start()
-        
+
     def setup_connections(self, thread):
         # Setup connections once the thread is created somewhere like in concat_videos
         thread.progress_update.connect(self.update_progress_bar)
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         thread.finished.connect(self.process_finished)
 
     def update_progress_bar(self, value):
-        #self.progress_bar.setValue(value)
+        # self.progress_bar.setValue(value)
         pass
 
     def display_progress_message(self, message):
@@ -159,6 +159,14 @@ class MainWindow(QMainWindow):
             print("Operation Successful!")
         else:
             print("Operation Failed:", message)
+
+
+class TimeLineEdit(QLineEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setInputMask("99:99:99;_")  # HH:MM:SS format
+        self.setText("00:00:00")
+        self.home(False)  # Move cursor to the end
 
 
 if __name__ == "__main__":
