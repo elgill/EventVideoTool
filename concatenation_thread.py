@@ -38,9 +38,10 @@ class ConcatenationThread(QThread):
                             duration = float(video_info['format']['duration'])
                             total_duration += duration
                         except Exception as e:
-                            print(f"Error reading video duration for {file}: {e}")
+                            pass
+                            #print(f"Error reading video duration for {file}: {e}")
 
-        print(f"Total Duration: {total_duration}")
+        #print(f"Total Duration: {total_duration}")
         process = FfmpegWrapper([
             get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
         ], expected_duration=total_duration)

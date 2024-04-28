@@ -18,8 +18,6 @@ def open_video(video_path):
             subprocess.run(['open', video_path])
         else:  # Linux variants
             subprocess.run(['xdg-open', video_path])
-    else:
-        print(f"Error: Video file '{video_path}' not found.")
 
 
 class MainWindow(QMainWindow):
@@ -155,10 +153,6 @@ class MainWindow(QMainWindow):
 
     def process_finished(self, success, message):
         self.statusBar().showMessage(message)
-        if success:
-            print("Operation Successful!")
-        else:
-            print("Operation Failed:", message)
 
 
 class TimeLineEdit(QLineEdit):
