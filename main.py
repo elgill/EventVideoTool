@@ -4,7 +4,6 @@ import os
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, \
     QWidget
-import ffmpeg
 
 from concatenation_thread import ConcatenationThread
 from reencode_thread import ReencodeThread
