@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.concatenated_file = None
         self.concatenation_thread = None
         self.setWindowTitle("Video Trimming and Concatenation Tool")
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 600, 400)
 
         # Create widgets
         self.clip_dir_label = QLabel("Clip Directory:")

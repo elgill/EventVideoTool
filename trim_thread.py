@@ -4,6 +4,7 @@ from ffmpeg import probe
 
 from ffmpeg_binaries import get_ffprobe_path, get_ffmpeg_path
 from ffmpeg_wrapper import FfmpegWrapper
+from utils import format_eta
 
 
 class TrimThread(QThread):
@@ -29,7 +30,7 @@ class TrimThread(QThread):
                     error_handler=self.handle_error)
 
     def handle_progress_info(self, percentage, speed, eta, estimated_filesize):
-        eta_str = f"{eta:.1f} seconds" if eta is not None else "N/A"
+        eta_str = format_eta(eta)
         message = f"Trim Progress: {percentage:.2f}%, Speed: {speed}x, ETA: {eta_str}"
         self.progress_update.emit(int(percentage))
         self.progress_message.emit(message)
