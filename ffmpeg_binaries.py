@@ -4,12 +4,12 @@ import sys
 
 def get_ffmpeg_path():
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, 'bin', get_ffmpeg_binary())
+    return os.path.join(base_path, 'ffmpeg_binaries', get_ffmpeg_binary())
 
 
 def get_ffprobe_path():
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, 'bin', get_ffprobe_binary())
+    return os.path.join(base_path, 'ffmpeg_binaries', get_ffprobe_binary())
 
 
 def get_ffmpeg_binary():
