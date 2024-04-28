@@ -1,8 +1,6 @@
-import os
 from PyQt5.QtCore import QThread, pyqtSignal
-from ffmpeg import probe
 
-from ffmpeg_binaries import get_ffprobe_path, get_ffmpeg_path
+from ffmpeg_binaries import get_ffmpeg_path
 from ffmpeg_wrapper import FfmpegWrapper
 from utils import format_eta
 
