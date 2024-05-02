@@ -15,7 +15,6 @@ class FfmpegWrapper:
             raise ValueError("FFmpeg command must include '-i'")
 
         self._ffmpeg_args = command + ["-hide_banner", "-loglevel", ffmpeg_loglevel]
-        self._output_filepath = command[-1]
         self._expected_duration = expected_duration
 
         self._set_file_info()
@@ -63,7 +62,7 @@ class FfmpegWrapper:
                     self._current_size = int(value)
 
                 elif "out_time_ms" in ffmpeg_output and "N/A" not in value:
-                    #ERROR here
+                    # ERROR here
                     self._seconds_processed = int(value) / 1_000_000
 
                     if self._can_get_duration:
@@ -103,8 +102,8 @@ class FfmpegWrapper:
     ):
 
         if ffmpeg_output_file is None:
-            os.makedirs("ffmpeg_output", exist_ok=True)
-            ffmpeg_output_file = os.path.join("ffmpeg_output", f"[{Path(self._filepath).name}].txt")
+            os.makedirs("ffmpeg_logs", exist_ok=True)
+            ffmpeg_output_file = os.path.join("ffmpeg_logs", f"[{Path(self._filepath).name}].txt")
 
         print(self._ffmpeg_args)
 
