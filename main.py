@@ -3,9 +3,10 @@ import sys
 import os
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, \
-    QWidget
+    QWidget, QCheckBox
 
 from concatenation_thread import ConcatenationThread
+from process_thread import ProcessThread
 from reencode_thread import ReencodeThread
 from trim_thread import TrimThread
 
@@ -23,6 +24,7 @@ def open_video(video_path):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.process_thread = None
         self.output_dir = None
         self.reencode_thread = None
         self.trim_thread = None
@@ -30,6 +32,7 @@ class MainWindow(QMainWindow):
         self.end_time = None
         self.start_time = None
         self.youtube_file = None
+        self.process_file = None
         self.trimmed_file = None
         self.concatenated_file = None
         self.concatenation_thread = None
@@ -47,11 +50,17 @@ class MainWindow(QMainWindow):
         self.output_dir_button = QPushButton("Browse")
         self.output_dir_button.clicked.connect(self.browse_output_dir)
 
+        self.reencode_checkbox = QCheckBox("Re-encode")
+        self.mute_checkbox = QCheckBox("Mute")
+
         self.trim_button = QPushButton("Trim and Mute")
         self.trim_button.clicked.connect(self.trim_and_mute)
 
         self.re_encode_button = QPushButton("Re-encode")
         self.re_encode_button.clicked.connect(self.re_encode_for_youtube)
+
+        self.process_button = QPushButton("Process")
+        self.process_button.clicked.connect(self.process)
 
         self.start_time_label = QLabel("Start Time (HH:MM:SS):")
         self.start_time_input = TimeLineEdit()
@@ -78,14 +87,18 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.concat_button)
         layout.addWidget(self.preview_button)
 
+        layout.addWidget(self.reencode_checkbox)
+        layout.addWidget(self.mute_checkbox)
+
         # In the layout
         layout.addWidget(self.start_time_label)
         layout.addWidget(self.start_time_input)
         layout.addWidget(self.end_time_label)
         layout.addWidget(self.end_time_input)
 
-        layout.addWidget(self.trim_button)
-        layout.addWidget(self.re_encode_button)
+        #layout.addWidget(self.trim_button)
+        #layout.addWidget(self.re_encode_button)
+        layout.addWidget(self.process_button)
 
         # Create central widget and set layout
         central_widget = QWidget()
@@ -123,6 +136,7 @@ class MainWindow(QMainWindow):
         self.concatenated_file = os.path.join(self.output_dir, "concatenated_output.mp4")
         self.trimmed_file = os.path.join(self.output_dir, "trimmed_output.mp4")
         self.youtube_file = os.path.join(self.output_dir, "youtube_output.mp4")
+        self.process_file = os.path.join(self.output_dir, "process_output.mp4")
 
     def trim_and_mute(self, ):
         self.set_fields()
@@ -137,6 +151,18 @@ class MainWindow(QMainWindow):
         self.reencode_thread = ReencodeThread(self.trimmed_file, self.youtube_file)
         self.setup_connections(self.reencode_thread)
         self.reencode_thread.start()
+
+    def process(self):
+        self.set_fields()
+
+        re_encode = self.reencode_checkbox.isChecked()
+        mute = self.mute_checkbox.isChecked()
+
+        # Start the concatenation thread
+        self.process_thread = ProcessThread(self.concatenated_file, self.process_file, self.start_time, self.end_time,
+                                            mute, re_encode)
+        self.setup_connections(self.process_thread)
+        self.process_thread.start()
 
     def setup_connections(self, thread):
         # Setup connections once the thread is created somewhere like in concat_videos
