@@ -18,7 +18,6 @@ class ConcatenationThread(QThread):
         self.output_file = output_file
 
     def run(self):
-        os.chdir(self.clip_dir)
         filelist_path = os.path.join(self.clip_dir, "filelist.txt")
         total_duration = 0  # Initialize total duration
 
@@ -56,9 +55,7 @@ class ConcatenationThread(QThread):
         self.progress_message.emit(message)
 
     def handle_success(self):
-        #print("Self Concatenation completed successfully!")
         self.finished.emit(True, "Concatenation completed successfully!")
 
     def handle_error(self):
-        #print("Concatenation failed!")
         self.finished.emit(False, f"Failed")
