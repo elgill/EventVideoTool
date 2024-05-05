@@ -45,6 +45,8 @@ class ConcatenationThread(QThread):
             get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
         ], expected_duration=total_duration)
 
+        self.progress_message.emit("Starting concatenation..")
+
         process.run(progress_handler=self.handle_progress_info, success_handler=self.handle_success,
                     error_handler=self.handle_error)
 

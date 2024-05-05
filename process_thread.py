@@ -33,24 +33,15 @@ class ProcessThread(QThread):
         if self.mute:
             ffmpeg_cmd.extend(["-an"])
 
+        # overwrite
+        ffmpeg_cmd.extend(["-y"])
+
         if self.output_file:
             ffmpeg_cmd.extend([self.output_file])
-        #else:
-        #    ffmpeg_cmd.extend(["-f", "mp4", "pipe:1"])
-        # TRIM
-        # ffmpeg -i "$INPUT_FILE" -ss $START_TIME -to $END_TIME -c:v copy -an "$TRIMMED_FILE"
-        # ffmpeg -i "$TRIMMED_FILE" -codec:v libx264 -preset fast -b:v 5M -an "$YOUTUBE_FILE"
-        #process = FfmpegWrapper([
-        #    get_ffmpeg_path(), "-i", self.input_file, "-ss", self.start_time, "-to", self.end_time, "-c:v", "copy",
-        #    "-an", self.output_file
-        #])
-
-        #process = FfmpegWrapper([
-        #    get_ffmpeg_path(), "-i", self.input_file, "-codec:v", "libx264", "-preset", "fast", "-b:v", "5M",
-        #    self.output_file
-        #])
 
         process = FfmpegWrapper(ffmpeg_cmd)
+
+        self.progress_message.emit("Starting processing..")
 
         process.run(progress_handler=self.handle_progress_info, success_handler=self.handle_success,
                     error_handler=self.handle_error)
@@ -58,7 +49,6 @@ class ProcessThread(QThread):
     def handle_progress_info(self, percentage, speed, eta, estimated_filesize):
         eta_str = format_eta(eta)
         message = f"Process Progress: {percentage:.2f}%, Speed: {speed}x, ETA: {eta_str}"
-        self.progress_update.emit(int(percentage))
         self.progress_message.emit(message)
 
     def handle_success(self):
