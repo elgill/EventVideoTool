@@ -162,7 +162,7 @@ class MainWindow(QMainWindow):
 
     def open_time_utilities(self):
         time_utilities_dialog = TimeUtilitiesDialog(self)
-        time_utilities_dialog.exec_()
+        time_utilities_dialog.show()
 
 
 class TimeLineEdit(QLineEdit):
