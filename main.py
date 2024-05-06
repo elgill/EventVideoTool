@@ -3,7 +3,7 @@ import sys
 import os
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, \
-    QWidget, QCheckBox, QFrame
+    QWidget, QCheckBox, QFrame, QMessageBox
 
 from concatenation_thread import ConcatenationThread
 from process_thread import ProcessThread
@@ -114,6 +114,16 @@ class MainWindow(QMainWindow):
     def concat_videos(self):
         self.set_fields()
 
+        if not os.path.isdir(self.clip_dir):
+            error_message = f"Invalid clip directory: {self.clip_dir}"
+            self.display_error_message(error_message)
+            return
+
+        if not os.path.isdir(self.output_dir):
+            error_message = f"Invalid output directory: {self.output_dir}"
+            self.display_error_message(error_message)
+            return
+
         # Start the concatenation thread
         self.concatenation_thread = ConcatenationThread(self.clip_dir, self.concatenated_file)
         self.setup_connections(self.concatenation_thread)
@@ -129,6 +139,9 @@ class MainWindow(QMainWindow):
         self.start_time = self.start_time_input.text()
         self.end_time = self.end_time_input.text()
 
+        if self.end_time == "00:00:00":
+            self.end_time = None
+
         self.concatenated_file = os.path.join(self.output_dir, "concatenated_output.mp4")
         self.process_file = os.path.join(self.output_dir, "process_output.mp4")
 
@@ -137,6 +150,16 @@ class MainWindow(QMainWindow):
 
         re_encode = self.reencode_checkbox.isChecked()
         mute = self.mute_checkbox.isChecked()
+
+        if not os.path.isdir(self.output_dir):
+            error_message = f"Invalid output directory: {self.output_dir}"
+            self.display_error_message(error_message)
+            return
+
+        if not os.path.isfile(self.concatenated_file):
+            error_message = f"Invalid concatenated file: {self.concatenated_file}"
+            self.display_error_message(error_message)
+            return
 
         # Start the concatenation thread
         self.process_thread = ProcessThread(self.concatenated_file, self.process_file, self.start_time, self.end_time,
@@ -163,6 +186,13 @@ class MainWindow(QMainWindow):
     def open_time_utilities(self):
         time_utilities_dialog = TimeUtilitiesDialog(self)
         time_utilities_dialog.show()
+
+    def display_error_message(self, message):
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Critical)
+        error_dialog.setText(message)
+        error_dialog.setWindowTitle("Error")
+        error_dialog.exec_()
 
 
 class TimeLineEdit(QLineEdit):
