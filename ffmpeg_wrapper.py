@@ -27,6 +27,22 @@ class FfmpegWrapper:
         self._seconds_processed = 0
         self._speed = 0
         self._current_size = 0
+        if sys.platform.startswith("win"):
+            self.creationflags = subprocess.CREATE_NO_WINDOW
+        else:
+            self.creationflags = 0
+
+    def _parse_time(self, time_str):
+        """Converts a HH:MM:SS or MM:SS or SS format string into total seconds as float."""
+        parts = time_str.split(':')
+        if len(parts) == 3:
+            hours, minutes, seconds = map(float, parts)
+            return hours * 3600 + minutes * 60 + seconds
+        elif len(parts) == 2:
+            minutes, seconds = map(float, parts)
+            return minutes * 60 + seconds
+        else:
+            return float(parts[0])
 
     def _set_file_info(self):
         index_of_filepath = self._ffmpeg_args.index("-i") + 1
@@ -35,13 +51,31 @@ class FfmpegWrapper:
 
         try:
             self._duration_secs = float(probe(self._filepath, cmd=get_ffprobe_path())["format"]["duration"])
-            print(
-                f"The duration of {self._filepath} has been detected as {self._duration_secs} seconds."
-            )
+            print(f"The duration of {self._filepath} has been detected as {self._duration_secs} seconds.")
         except Exception:
             self._can_get_duration = self._expected_duration > 0
             if self._can_get_duration:
                 self._duration_secs = self._expected_duration
+
+        # Initialize start time and trimmed duration
+        start_time = 0
+        trimmed_duration = self._duration_secs
+
+        # Check for start time (-ss)
+        if "-ss" in self._ffmpeg_args:
+            start_index = self._ffmpeg_args.index("-ss") + 1
+            start_time = self._parse_time(self._ffmpeg_args[start_index])
+
+        # Check for duration (-t) or end time (-to)
+        if "-t" in self._ffmpeg_args:
+            duration_index = self._ffmpeg_args.index("-t") + 1
+            trimmed_duration = self._parse_time(self._ffmpeg_args[duration_index])
+        elif "-to" in self._ffmpeg_args:
+            end_index = self._ffmpeg_args.index("-to") + 1
+            end_time = self._parse_time(self._ffmpeg_args[end_index])
+            trimmed_duration = end_time - start_time
+
+        self._duration_secs = trimmed_duration
 
         if self._can_get_duration:
             self._ffmpeg_args += ["-progress", "pipe:1", "-nostats"]
@@ -108,7 +142,7 @@ class FfmpegWrapper:
         print(self._ffmpeg_args)
 
         with open(ffmpeg_output_file, "a") as f:
-            process = subprocess.Popen(self._ffmpeg_args, stdout=subprocess.PIPE, stderr=f)
+            process = subprocess.Popen(self._ffmpeg_args, stdout=subprocess.PIPE, stderr=f, creationflags=self.creationflags)
             print(f"\nRunning: {' '.join(self._ffmpeg_args)}\n")
 
         if progress_handler is None and self._can_get_duration:
