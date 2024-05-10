@@ -103,7 +103,9 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-    def load_icon(self, icon_path):
+    def load_icon(self, icon_name):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        icon_path = os.path.join(base_path, icon_name)
         return QIcon(icon_path)
 
     def browse_clip_dir(self):
