@@ -3,7 +3,8 @@
 block_cipher = None
 
 added_files = [
-    ('ffmpeg_binaries', 'ffmpeg_binaries')
+    ('ffmpeg_binaries', 'ffmpeg_binaries'),
+    ('icon.png', '.')
 ]
 
 a = Analysis(
@@ -44,4 +45,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='icon.png',
 )
