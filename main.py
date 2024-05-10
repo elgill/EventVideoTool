@@ -2,6 +2,7 @@ import subprocess
 import sys
 import os
 
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, \
     QWidget, QCheckBox, QFrame, QMessageBox
 
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow):
         self.concatenated_file = None
         self.concatenation_thread = None
         self.setWindowTitle("Video Trimming and Concatenation Tool")
+        self.setWindowIcon(self.load_icon("icon.png"))
         self.setGeometry(100, 100, 600, 400)
 
         self.separator = QFrame()
@@ -100,6 +102,9 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
+
+    def load_icon(self, icon_path):
+        return QIcon(icon_path)
 
     def browse_clip_dir(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Clip Directory")
@@ -185,6 +190,7 @@ class MainWindow(QMainWindow):
 
     def open_time_utilities(self):
         time_utilities_dialog = TimeUtilitiesDialog(self)
+        time_utilities_dialog.setWindowIcon(self.load_icon('icon.png'))
         time_utilities_dialog.show()
 
     def display_error_message(self, message):
