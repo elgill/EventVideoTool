@@ -27,7 +27,7 @@ class ConcatenationThread(QThread):
 
         with open(filelist_path, "w") as filelist:
             for file in sorted(os.listdir(self.clip_dir)):
-                if file.endswith(".mp4") or file.endswith(".MP4"):
+                if (file.endswith(".mp4") or file.endswith(".MP4")) and not file.startswith("."):
                     file_path = os.path.join(self.clip_dir, file)
                     if os.path.getsize(file_path) > 0:
                         filelist.write(f"file '{file_path}'\n")
