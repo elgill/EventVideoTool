@@ -42,7 +42,7 @@ class ConcatenationThread(QThread):
 
         #print(f"Total Duration: {total_duration}")
         process = FfmpegWrapper([
-            get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
+            get_ffmpeg_path(), "-f", "concat", "-safe", "0", "-hwaccel", "auto", "-i", filelist_path, "-c", "copy", self.output_file, "-y"
         ], expected_duration=total_duration)
 
         self.progress_message.emit("Starting concatenation..")

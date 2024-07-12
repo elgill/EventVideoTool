@@ -2,6 +2,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from ffmpeg_binaries import get_ffmpeg_path
 from ffmpeg_wrapper import FfmpegWrapper
+from hardware_encoder_util import get_hardware_encoder
 from utils import format_eta
 
 
@@ -20,13 +21,17 @@ class ProcessThread(QThread):
         self.re_encode = re_encode
 
     def run(self):
-        ffmpeg_cmd = [get_ffmpeg_path(), "-i", self.input_file]
+        ffmpeg_cmd = [get_ffmpeg_path(), "-hwaccel", "auto", "-i", self.input_file]
 
         if self.start_time and self.end_time:
             ffmpeg_cmd.extend(["-ss", self.start_time, "-to", self.end_time])
 
         if self.re_encode:
-            ffmpeg_cmd.extend(["-codec:v", "libx264", "-preset", "fast", "-b:v", "5M"])
+            hw_encoder = get_hardware_encoder()
+            if hw_encoder:
+                ffmpeg_cmd.extend(["-c:v", hw_encoder, "-preset", "fast", "-b:v", "5M"])
+            else:
+                ffmpeg_cmd.extend(["-c:v", "libx264", "-preset", "fast", "-b:v", "5M"])
         else:
             ffmpeg_cmd.extend(["-c:v", "copy"])
 
