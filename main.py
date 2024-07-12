@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
 
         self.reencode_checkbox = QCheckBox("Re-encode")
         self.mute_checkbox = QCheckBox("Mute")
+        self.hw_acceleration_checkbox = QCheckBox("HW Acceleration")
 
         self.process_button = QPushButton("Process")
         self.process_button.clicked.connect(self.process)
@@ -87,6 +88,7 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self.reencode_checkbox)
         layout.addWidget(self.mute_checkbox)
+        layout.addWidget(self.hw_acceleration_checkbox)
 
         # In the layout
         layout.addWidget(self.start_time_label)
@@ -157,6 +159,7 @@ class MainWindow(QMainWindow):
 
         re_encode = self.reencode_checkbox.isChecked()
         mute = self.mute_checkbox.isChecked()
+        hw_acceleration = self.hw_acceleration_checkbox.isChecked()
 
         if not os.path.isdir(self.output_dir):
             error_message = f"Invalid output directory: {self.output_dir}"
@@ -170,7 +173,7 @@ class MainWindow(QMainWindow):
 
         # Start the concatenation thread
         self.process_thread = ProcessThread(self.concatenated_file, self.process_file, self.start_time, self.end_time,
-                                            mute, re_encode)
+                                            mute, re_encode, hw_acceleration)
         self.setup_connections(self.process_thread)
         self.process_thread.start()
 
