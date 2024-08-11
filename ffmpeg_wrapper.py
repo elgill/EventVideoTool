@@ -49,13 +49,15 @@ class FfmpegWrapper:
         self._filepath = self._ffmpeg_args[index_of_filepath]
         self._can_get_duration = True
 
-        try:
-            self._duration_secs = float(probe(self._filepath, cmd=get_ffprobe_path())["format"]["duration"])
-            print(f"The duration of {self._filepath} has been detected as {self._duration_secs} seconds.")
-        except Exception:
-            self._can_get_duration = self._expected_duration > 0
-            if self._can_get_duration:
-                self._duration_secs = self._expected_duration
+        if self._expected_duration > 0:
+            self._can_get_duration = True
+            self._duration_secs = self._expected_duration
+        else:
+            try:
+                self._duration_secs = float(probe(self._filepath, cmd=get_ffprobe_path())["format"]["duration"])
+                print(f"The duration of {self._filepath} has been detected as {self._duration_secs} seconds.")
+            except Exception:
+                self._can_get_duration = False
 
         # Initialize start time and trimmed duration
         start_time = 0
@@ -97,6 +99,7 @@ class FfmpegWrapper:
 
                 elif "out_time_ms" in ffmpeg_output and "N/A" not in value:
                     # ERROR here
+                    #print("SecondsPr")
                     self._seconds_processed = int(value) / 1_000_000
 
                     if self._can_get_duration:
