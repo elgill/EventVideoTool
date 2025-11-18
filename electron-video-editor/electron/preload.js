@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('video:progress', subscription);
     };
+  },
+
+  // Convert file path to media:// protocol URL for video playback
+  getMediaUrl: (filePath) => {
+    return `media://${encodeURIComponent(filePath)}`;
   }
 });
 

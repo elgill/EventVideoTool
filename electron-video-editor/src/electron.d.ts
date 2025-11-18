@@ -15,6 +15,9 @@ export interface ElectronAPI {
 
   // Progress listener
   onProgress: (callback: (data: ProgressData) => void) => () => void;
+
+  // Media URL helper
+  getMediaUrl: (filePath: string) => string;
 }
 
 export interface VideoFile {

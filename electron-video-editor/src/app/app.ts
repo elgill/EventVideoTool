@@ -162,8 +162,9 @@ export class App implements OnDestroy {
   }
 
   updatePreview(filePath: string) {
-    // For Electron, we need to use a file:// URL
-    this.previewVideoUrl.set(`file://${filePath}`);
+    // Use custom media:// protocol to load local video files securely
+    const mediaUrl = (window as any).electronAPI?.getMediaUrl(filePath) || filePath;
+    this.previewVideoUrl.set(mediaUrl);
     this.showPreview.set(true);
   }
 

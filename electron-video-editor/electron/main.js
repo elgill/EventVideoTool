@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
 const url = require('url');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
@@ -12,6 +12,16 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
 let mainWindow;
+
+// Register custom protocol for serving local video files
+app.whenReady().then(() => {
+  protocol.registerFileProtocol('media', (request, callback) => {
+    const filePath = decodeURIComponent(request.url.replace('media://', ''));
+    callback({ path: filePath });
+  });
+
+  createWindow();
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -43,8 +53,6 @@ function createWindow() {
     mainWindow = null;
   });
 }
-
-app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
