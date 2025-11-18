@@ -1,0 +1,221 @@
+<div class="app-container">
+  <header class="app-header">
+    <h1>Video Editor</h1>
+    <p class="subtitle">Trim, concatenate, and re-encode videos with ease</p>
+  </header>
+
+  <div class="main-content">
+    <!-- Left Panel: Controls -->
+    <div class="controls-panel">
+      <section class="section">
+        <h2>1. Select Directories</h2>
+
+        <div class="form-group">
+          <label>Clip Directory:</label>
+          <div class="input-with-button">
+            <input type="text" [value]="clipDirectory()" readonly placeholder="Select directory with video clips">
+            <button (click)="selectClipDirectory()" [disabled]="isProcessing()">Browse</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Output Directory:</label>
+          <div class="input-with-button">
+            <input type="text" [value]="outputDirectory()" readonly placeholder="Select output directory">
+            <button (click)="selectOutputDirectory()" [disabled]="isProcessing()">Browse</button>
+          </div>
+        </div>
+
+        @if (videoFiles().length > 0) {
+          <div class="video-files-info">
+            <p><strong>{{ videoFiles().length }}</strong> video files found</p>
+            <p>Total Duration: <strong>{{ formatDuration(totalDuration()) }}</strong></p>
+          </div>
+        }
+      </section>
+
+      <section class="section">
+        <h2>2. Concatenate Videos</h2>
+        <button
+          class="primary-button"
+          (click)="concatenateVideos()"
+          [disabled]="!canConcatenate() || isProcessing()">
+          Concatenate Videos
+        </button>
+        @if (concatenatedFile()) {
+          <p class="success-message">✓ Concatenated file ready</p>
+        }
+      </section>
+
+      <section class="section">
+        <h2>3. Processing Options</h2>
+
+        <div class="form-group">
+          <label>Start Time (HH:MM:SS):</label>
+          <input type="text" [(ngModel)]="startTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+        </div>
+
+        <div class="form-group">
+          <label>End Time (HH:MM:SS):</label>
+          <input type="text" [(ngModel)]="endTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+        </div>
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="reEncode">
+            Re-encode video
+          </label>
+        </div>
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="mute">
+            Mute audio
+          </label>
+        </div>
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="useHardwareAcceleration">
+            Hardware acceleration
+          </label>
+        </div>
+
+        <button
+          class="primary-button"
+          (click)="processVideo()"
+          [disabled]="!canProcess() || isProcessing()">
+          Process Video
+        </button>
+        @if (processedFile()) {
+          <p class="success-message">✓ Processed file ready</p>
+        }
+      </section>
+
+      <section class="section">
+        <h2>4. Preview & Export</h2>
+        <div class="button-group">
+          <button
+            (click)="previewVideo()"
+            [disabled]="!concatenatedFile() && !processedFile()">
+            Open in External Player
+          </button>
+          <button (click)="toggleTimeUtilities()">Time Utilities</button>
+        </div>
+      </section>
+
+      <!-- Progress Section -->
+      @if (isProcessing() || progressMessage()) {
+        <section class="section progress-section">
+          <h3>Progress</h3>
+          <div class="progress-info">
+            <p>{{ progressMessage() }}</p>
+            @if (isProcessing()) {
+              <div class="spinner"></div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+
+    <!-- Right Panel: Video Preview -->
+    <div class="preview-panel">
+      <h2>Video Preview</h2>
+      @if (showPreview() && previewVideoUrl()) {
+        <div class="video-container">
+          <video
+            [src]="previewVideoUrl()"
+            controls
+            class="video-player"
+            #videoPlayer>
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      } @else {
+        <div class="no-preview">
+          <p>No video to preview</p>
+          <p class="hint">Concatenate or process videos to see preview</p>
+        </div>
+      }
+
+      <!-- Video Files List -->
+      @if (videoFiles().length > 0) {
+        <div class="video-files-list">
+          <h3>Video Files ({{ videoFiles().length }})</h3>
+          <div class="files-scroll">
+            @for (file of videoFiles(); track file.path) {
+              <div class="file-item">
+                <div class="file-name">{{ file.name }}</div>
+                <div class="file-info">
+                  {{ formatDuration(file.duration) }} • {{ formatFileSize(file.size) }}
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Time Utilities Dialog -->
+  @if (showTimeUtilities()) {
+    <div class="modal-overlay" (click)="toggleTimeUtilities()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Time Utilities</h2>
+          <button class="close-button" (click)="toggleTimeUtilities()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="utilities-grid">
+            <!-- Time Difference Calculator -->
+            <div class="utility-section">
+              <h3>Time Difference Calculator</h3>
+              <p class="help-text">Calculate recording time based on event times</p>
+
+              <div class="form-group">
+                <label>Event Time 1:</label>
+                <input type="text" [(ngModel)]="eventTime1" placeholder="00:00:00">
+              </div>
+
+              <div class="form-group">
+                <label>Recording Time 1:</label>
+                <input type="text" [(ngModel)]="recordingTime1" placeholder="00:00:00">
+              </div>
+
+              <div class="form-group">
+                <label>Event Time 2:</label>
+                <input type="text" [(ngModel)]="eventTime2" placeholder="00:00:00">
+              </div>
+
+              <button class="secondary-button" (click)="calculateTimeDifference()">Calculate</button>
+
+              <div class="result-display">
+                <label>Recording Time 2:</label>
+                <strong>{{ calculatedRecordingTime2() }}</strong>
+              </div>
+            </div>
+
+            <!-- Time to Seconds Converter -->
+            <div class="utility-section">
+              <h3>Time to Seconds</h3>
+              <p class="help-text">Convert HH:MM:SS to total seconds</p>
+
+              <div class="form-group">
+                <label>Time (HH:MM:SS):</label>
+                <input type="text" [(ngModel)]="timeToConvert" placeholder="00:00:00">
+              </div>
+
+              <button class="secondary-button" (click)="convertTimeToSeconds()">Convert</button>
+
+              <div class="result-display">
+                <label>Total Seconds:</label>
+                <strong>{{ convertedSeconds() }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
