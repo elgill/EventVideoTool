@@ -29,23 +29,61 @@ protocol.registerSchemesAsPrivileged([
 
 // Register custom protocol for serving local video files
 app.whenReady().then(() => {
-  protocol.registerFileProtocol('media', (request, callback) => {
+  protocol.registerStreamProtocol('media', (request, callback) => {
     try {
       const filePath = decodeURIComponent(request.url.replace('media://', ''));
       console.log('Media protocol request:', request.url);
       console.log('Resolved file path:', filePath);
 
-      // Verify file exists
+      // Verify file exists and is readable
       if (!fsSync.existsSync(filePath)) {
         console.error('File not found:', filePath);
-        callback({ error: -6 }); // FILE_NOT_FOUND
+        callback({ statusCode: 404 });
         return;
       }
 
-      callback({ path: filePath });
+      // Check if file is readable
+      try {
+        fsSync.accessSync(filePath, fsSync.constants.R_OK);
+      } catch (err) {
+        console.error('File not readable:', filePath, err);
+        callback({ statusCode: 403 });
+        return;
+      }
+
+      // Get file stats for headers
+      const stat = fsSync.statSync(filePath);
+      console.log('File size:', stat.size, 'bytes');
+
+      // Determine MIME type based on extension
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.mp4': 'video/mp4',
+        '.mov': 'video/quicktime',
+        '.avi': 'video/x-msvideo',
+        '.mkv': 'video/x-matroska',
+        '.webm': 'video/webm'
+      };
+      const mimeType = mimeTypes[ext] || 'video/mp4';
+      console.log('MIME type:', mimeType);
+
+      // Create read stream for the file
+      const readStream = fsSync.createReadStream(filePath);
+
+      callback({
+        statusCode: 200,
+        headers: {
+          'Content-Type': mimeType,
+          'Content-Length': stat.size.toString(),
+          'Accept-Ranges': 'bytes'
+        },
+        data: readStream
+      });
+
+      console.log('Streaming video file successfully');
     } catch (error) {
       console.error('Protocol error:', error);
-      callback({ error: -2 });
+      callback({ statusCode: 500 });
     }
   });
 
