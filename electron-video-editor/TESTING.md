@@ -43,6 +43,9 @@ When video loads successfully, you should see:
 ```
 Media protocol request: media://%2FUsers%2Fchris%2FDownloads%2FTestMOV%2Fout2%2Fconcatenated_output.mp4
 Resolved file path: /Users/chris/Downloads/TestMOV/out2/concatenated_output.mp4
+File size: 12345678 bytes
+MIME type: video/mp4
+Streaming video file successfully
 ```
 
 ### Common Issues:
@@ -57,6 +60,24 @@ Resolved file path: /Users/chris/Downloads/TestMOV/out2/concatenated_output.mp4
 **Issue**: Video element shows but doesn't play
 - **Cause**: Codec might not be supported
 - **Solution**: Try a different MP4 file or re-encode with H.264
+
+**Issue**: "Unable to play media" error in DevTools
+- **Cause**: Could be missing MIME type headers or unsupported codec
+- **Debug Steps**:
+  1. Check terminal console for these messages:
+     - "File size: X bytes"
+     - "MIME type: video/mp4"
+     - "Streaming video file successfully"
+  2. If you see these messages, the protocol is working
+  3. Check the video codec with ffprobe:
+     ```bash
+     ffprobe /path/to/your/video.mp4
+     ```
+  4. Look for "Video: h264" in the output - if it says something else, the codec might not be supported
+  5. Try re-encoding the video:
+     ```bash
+     ffmpeg -i input.mp4 -c:v libx264 -c:a aac output.mp4
+     ```
 
 ## Video Format Support:
 
