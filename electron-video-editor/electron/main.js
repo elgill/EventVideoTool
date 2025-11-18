@@ -104,7 +104,7 @@ function getVideoMetadata(filePath) {
 // Select directory
 ipcMain.handle('dialog:selectDirectory', async (event, title) => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openDirectory'],
+    properties: ['openDirectory', 'createDirectory'],
     title: title || 'Select Directory'
   });
 
@@ -175,15 +175,14 @@ ipcMain.handle('video:concatenate', async (event, { inputFiles, outputPath, useH
       const fileListContent = inputFiles.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n');
       await fs.writeFile(fileListPath, fileListContent);
 
-      const command = ffmpeg();
-
+      // Build input options
+      const inputOptions = ['-f', 'concat', '-safe', '0'];
       if (useHardwareAcceleration) {
-        command.inputOptions(['-hwaccel', 'auto']);
+        inputOptions.unshift('-hwaccel', 'auto');
       }
 
-      command
-        .input(fileListPath)
-        .inputOptions(['-f', 'concat', '-safe', '0'])
+      const command = ffmpeg(fileListPath)
+        .inputOptions(inputOptions)
         .outputOptions(['-c', 'copy'])
         .output(outputPath)
         .on('start', (commandLine) => {
