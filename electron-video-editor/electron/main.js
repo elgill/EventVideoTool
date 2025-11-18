@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
 const path = require('path');
 const url = require('url');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
@@ -14,19 +14,39 @@ ffmpeg.setFfprobePath(ffprobePath);
 let mainWindow;
 
 // Register protocol scheme as privileged before app is ready
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient('media', process.execPath, [path.resolve(process.argv[1])]);
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'media',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true
+    }
   }
-} else {
-  app.setAsDefaultProtocolClient('media');
-}
+]);
 
 // Register custom protocol for serving local video files
 app.whenReady().then(() => {
-  protocol.handle('media', (request) => {
-    const filePath = decodeURIComponent(request.url.replace('media://', ''));
-    return net.fetch(`file://${filePath}`);
+  protocol.registerFileProtocol('media', (request, callback) => {
+    try {
+      const filePath = decodeURIComponent(request.url.replace('media://', ''));
+      console.log('Media protocol request:', request.url);
+      console.log('Resolved file path:', filePath);
+
+      // Verify file exists
+      if (!fsSync.existsSync(filePath)) {
+        console.error('File not found:', filePath);
+        callback({ error: -6 }); // FILE_NOT_FOUND
+        return;
+      }
+
+      callback({ path: filePath });
+    } catch (error) {
+      console.error('Protocol error:', error);
+      callback({ error: -2 });
+    }
   });
 
   createWindow();
@@ -52,6 +72,16 @@ function createWindow() {
   });
 
   mainWindow.loadURL(startUrl);
+
+  // Update Content Security Policy to allow media:// protocol
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': ["default-src 'self' 'unsafe-inline' 'unsafe-eval' media: http://localhost:* ws://localhost:*"]
+      }
+    });
+  });
 
   // Open DevTools in development
   if (process.env.ELECTRON_START_URL) {
