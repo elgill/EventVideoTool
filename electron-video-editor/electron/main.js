@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, net } = require('electron');
 const path = require('path');
 const url = require('url');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
@@ -13,11 +13,20 @@ ffmpeg.setFfprobePath(ffprobePath);
 
 let mainWindow;
 
+// Register protocol scheme as privileged before app is ready
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('media', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('media');
+}
+
 // Register custom protocol for serving local video files
 app.whenReady().then(() => {
-  protocol.registerFileProtocol('media', (request, callback) => {
+  protocol.handle('media', (request) => {
     const filePath = decodeURIComponent(request.url.replace('media://', ''));
-    callback({ path: filePath });
+    return net.fetch(`file://${filePath}`);
   });
 
   createWindow();

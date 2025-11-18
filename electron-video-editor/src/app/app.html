@@ -48,16 +48,43 @@
       </section>
 
       <section class="section">
-        <h2>3. Processing Options</h2>
+        <h2>3. Event Time Sync</h2>
+        <p class="help-text">Sync video time with race clock time</p>
 
         <div class="form-group">
-          <label>Start Time (HH:MM:SS):</label>
-          <input type="text" [(ngModel)]="startTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+          <label>Event Start Time (HH:MM:SS):</label>
+          <input type="text" [(ngModel)]="eventStartTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
         </div>
 
         <div class="form-group">
-          <label>End Time (HH:MM:SS):</label>
-          <input type="text" [(ngModel)]="endTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+          <label>Recording Start Time (HH:MM:SS):</label>
+          <input type="text" [(ngModel)]="recordingStartTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>4. Trim & Processing Options</h2>
+
+        <div class="trim-controls">
+          <div class="form-group">
+            <label>Start Time (HH:MM:SS):</label>
+            <div class="input-with-button">
+              <input type="text" [(ngModel)]="startTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+              <button (click)="setStartTimeFromPlayback()" [disabled]="!showPreview()" title="Set from current playback">
+                📍
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>End Time (HH:MM:SS):</label>
+            <div class="input-with-button">
+              <input type="text" [(ngModel)]="endTime" placeholder="00:00:00" pattern="\d{2}:\d{2}:\d{2}">
+              <button (click)="setEndTimeFromPlayback()" [disabled]="!showPreview()" title="Set from current playback">
+                📍
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="checkbox-group">
@@ -93,7 +120,7 @@
       </section>
 
       <section class="section">
-        <h2>4. Preview & Export</h2>
+        <h2>5. Preview & Export</h2>
         <div class="button-group">
           <button
             (click)="previewVideo()"
@@ -122,14 +149,57 @@
     <div class="preview-panel">
       <h2>Video Preview</h2>
       @if (showPreview() && previewVideoUrl()) {
-        <div class="video-container">
-          <video
-            [src]="previewVideoUrl()"
-            controls
-            class="video-player"
-            #videoPlayer>
-            Your browser does not support the video tag.
-          </video>
+        <div class="video-wrapper">
+          <div class="video-container">
+            <video
+              [src]="previewVideoUrl()"
+              controls
+              class="video-player"
+              (timeupdate)="onVideoTimeUpdate($event)"
+              (loadedmetadata)="onVideoLoadedMetadata($event)"
+              #videoPlayer>
+              Your browser does not support the video tag.
+            </video>
+          </div>
+
+          <!-- Time Display -->
+          <div class="time-display">
+            <div class="time-row">
+              <span class="time-label">Playback Time:</span>
+              <span class="time-value">{{ formatDuration(currentPlaybackTime()) }}</span>
+              <span class="time-total">/ {{ formatDuration(videoDuration()) }}</span>
+            </div>
+            <div class="time-row event-time">
+              <span class="time-label">Event Time:</span>
+              <span class="time-value">{{ currentEventTime() }}</span>
+            </div>
+          </div>
+
+          <!-- Trim Markers Visualization -->
+          @if (startTime() !== '00:00:00' || endTime() !== '00:00:00') {
+            <div class="trim-markers">
+              <div class="timeline">
+                @if (startTime() !== '00:00:00') {
+                  <div
+                    class="marker start-marker"
+                    [style.left.%]="getStartTimePercentage()"
+                    (click)="seekToStartTime()"
+                    title="Start: {{ startTime() }}">
+                    <div class="marker-label">START</div>
+                  </div>
+                }
+                @if (endTime() !== '00:00:00') {
+                  <div
+                    class="marker end-marker"
+                    [style.left.%]="getEndTimePercentage()"
+                    (click)="seekToEndTime()"
+                    title="End: {{ endTime() }}">
+                    <div class="marker-label">END</div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
       } @else {
         <div class="no-preview">

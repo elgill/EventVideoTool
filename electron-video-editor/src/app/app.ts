@@ -31,6 +31,24 @@ export class App implements OnDestroy {
   // Video preview
   previewVideoUrl = signal<string>('');
   showPreview = signal<boolean>(false);
+  currentPlaybackTime = signal<number>(0);
+  videoDuration = signal<number>(0);
+
+  // Event time sync
+  eventStartTime = signal<string>('00:00:00');
+  recordingStartTime = signal<string>('00:00:00');
+
+  // Computed event time based on playback
+  currentEventTime = computed(() => {
+    const playbackSeconds = this.currentPlaybackTime();
+    const recordingStartSeconds = this.timeUtils.timeToSeconds(this.recordingStartTime());
+    const eventStartSeconds = this.timeUtils.timeToSeconds(this.eventStartTime());
+
+    const offset = recordingStartSeconds - eventStartSeconds;
+    const eventSeconds = playbackSeconds + offset;
+
+    return this.timeUtils.secondsToTime(eventSeconds);
+  });
 
   // Time utilities dialog
   showTimeUtilities = signal<boolean>(false);
@@ -166,6 +184,54 @@ export class App implements OnDestroy {
     const mediaUrl = (window as any).electronAPI?.getMediaUrl(filePath) || filePath;
     this.previewVideoUrl.set(mediaUrl);
     this.showPreview.set(true);
+  }
+
+  onVideoTimeUpdate(event: Event) {
+    const video = event.target as HTMLVideoElement;
+    this.currentPlaybackTime.set(video.currentTime);
+  }
+
+  onVideoLoadedMetadata(event: Event) {
+    const video = event.target as HTMLVideoElement;
+    this.videoDuration.set(video.duration);
+  }
+
+  setStartTimeFromPlayback() {
+    const currentTime = this.currentPlaybackTime();
+    this.startTime.set(this.timeUtils.secondsToTime(currentTime));
+  }
+
+  setEndTimeFromPlayback() {
+    const currentTime = this.currentPlaybackTime();
+    this.endTime.set(this.timeUtils.secondsToTime(currentTime));
+  }
+
+  seekToStartTime() {
+    const startSeconds = this.timeUtils.timeToSeconds(this.startTime());
+    const video = document.querySelector('video');
+    if (video) {
+      video.currentTime = startSeconds;
+    }
+  }
+
+  seekToEndTime() {
+    const endSeconds = this.timeUtils.timeToSeconds(this.endTime());
+    const video = document.querySelector('video');
+    if (video) {
+      video.currentTime = endSeconds;
+    }
+  }
+
+  getStartTimePercentage(): number {
+    if (this.videoDuration() === 0) return 0;
+    const startSeconds = this.timeUtils.timeToSeconds(this.startTime());
+    return (startSeconds / this.videoDuration()) * 100;
+  }
+
+  getEndTimePercentage(): number {
+    if (this.videoDuration() === 0) return 0;
+    const endSeconds = this.timeUtils.timeToSeconds(this.endTime());
+    return (endSeconds / this.videoDuration()) * 100;
   }
 
   toggleTimeUtilities() {

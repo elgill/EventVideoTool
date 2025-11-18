@@ -266,12 +266,17 @@ button {
   }
 }
 
-.video-container {
+.video-wrapper {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-container {
   background: #000;
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -282,6 +287,128 @@ button {
   max-height: 100%;
   width: 100%;
   height: auto;
+}
+
+.time-display {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &.event-time {
+      .time-value {
+        color: #667eea;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .time-label {
+    font-size: 13px;
+    color: #718096;
+    font-weight: 500;
+    min-width: 110px;
+  }
+
+  .time-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+    font-family: 'Courier New', monospace;
+  }
+
+  .time-total {
+    font-size: 14px;
+    color: #718096;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+.trim-markers {
+  margin-bottom: 15px;
+
+  .timeline {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(to right, #e2e8f0 0%, #cbd5e0 50%, #e2e8f0 100%);
+    border-radius: 8px;
+    border: 2px solid #cbd5e0;
+  }
+
+  .marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      width: 5px;
+
+      .marker-label {
+        opacity: 1;
+        transform: translateY(-28px) scale(1.05);
+      }
+    }
+
+    .marker-label {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-25px);
+      background: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      opacity: 0.9;
+      transition: all 0.2s;
+    }
+
+    &.start-marker {
+      background: #48bb78;
+      border-left: 2px solid #38a169;
+
+      .marker-label {
+        color: #38a169;
+        border: 1px solid #48bb78;
+      }
+    }
+
+    &.end-marker {
+      background: #f56565;
+      border-right: 2px solid #e53e3e;
+
+      .marker-label {
+        color: #e53e3e;
+        border: 1px solid #f56565;
+      }
+    }
+  }
+}
+
+.trim-controls {
+  margin-bottom: 15px;
+}
+
+.help-text {
+  font-size: 13px;
+  color: #718096;
+  margin-bottom: 15px;
 }
 
 .no-preview {
