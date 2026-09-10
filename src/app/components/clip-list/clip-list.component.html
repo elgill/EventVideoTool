@@ -1,0 +1,24 @@
+<div class="clip-list">
+  <div class="clip-list-header">
+    <span>{{ clips().length }} clip(s)</span>
+    <span>{{ formatHms(totalDuration(clips())) }} total</span>
+  </div>
+
+  @if (clips().length === 0) {
+    <p class="empty-hint">Choose a clip directory to see clips here.</p>
+  } @else {
+    <ul>
+      @for (clip of clips(); track clip.path) {
+        <li
+          [class.selected]="clip.path === selectedPath()"
+          (click)="clipSelected.emit(clip)"
+        >
+          <span class="clip-name">{{ clip.name }}</span>
+          <span class="clip-duration">
+            {{ clip.duration_secs !== null ? formatHms(clip.duration_secs) : "?" }}
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</div>

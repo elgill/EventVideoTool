@@ -1,0 +1,96 @@
+.video-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  height: 100%;
+  min-height: 0;
+}
+
+video {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #000;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.empty-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  font-size: 0.9em;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+}
+
+.time-readout {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.track {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.track-bg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 6px;
+  transform: translateY(-50%);
+  background: var(--surface-hover);
+  border-radius: 3px;
+}
+
+.trim-range {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.55;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--text);
+  transform: translateX(-1px);
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.trim-readout {
+  font-size: 0.8em;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}

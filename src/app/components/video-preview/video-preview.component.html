@@ -1,0 +1,61 @@
+<div class="video-preview">
+  @if (src()) {
+    <video
+      #videoEl
+      [src]="src()"
+      (loadedmetadata)="onLoadedMetadata()"
+      (timeupdate)="onTimeUpdate()"
+      (play)="onPlay()"
+      (pause)="onPause()"
+    ></video>
+
+    <div class="controls">
+      <button type="button" (click)="togglePlay()">
+        {{ isPlaying() ? "Pause" : "Play" }}
+      </button>
+      <span class="time-readout">
+        {{ formatHms(currentTime()) }} / {{ formatHms(duration()) }}
+      </span>
+    </div>
+
+    <div class="track" #trackEl (click)="onTrackClick($event)">
+      <div class="track-bg"></div>
+
+      @if (trimEnabled()) {
+        <div
+          class="trim-range"
+          [style.left.%]="startPct()"
+          [style.width.%]="endPct() - startPct()"
+        ></div>
+      }
+
+      <div class="playhead" [style.left.%]="playheadPct()"></div>
+
+      @if (trimEnabled()) {
+        <div
+          class="handle handle-start"
+          [style.left.%]="startPct()"
+          (pointerdown)="startDrag('start', $event)"
+          title="Trim start: {{ formatHms(trimStart()) }}"
+        ></div>
+        <div
+          class="handle handle-end"
+          [style.left.%]="endPct()"
+          (pointerdown)="startDrag('end', $event)"
+          title="Trim end: {{ formatHms(trimEnd()) }}"
+        ></div>
+      }
+    </div>
+
+    @if (trimEnabled()) {
+      <div class="trim-readout">
+        Trim: {{ formatHms(trimStart()) }} &ndash; {{ formatHms(trimEnd()) }}
+        ({{ formatHms(trimEnd() - trimStart()) }})
+      </div>
+    }
+  } @else {
+    <div class="empty-preview">
+      Select a clip, or run Concat, to preview it here.
+    </div>
+  }
+</div>

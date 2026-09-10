@@ -1,0 +1,122 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 0.8em 1em;
+  gap: 0.6em;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-header h1 {
+  font-size: 1.1em;
+  margin: 0;
+}
+
+.app-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  gap: 1em;
+}
+
+@media (max-width: 900px) {
+  .app-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow-y: auto;
+  }
+}
+
+.sidebar,
+.options-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  min-height: 0;
+}
+
+.clip-list-section {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5em;
+}
+
+.preview-pane {
+  min-height: 0;
+  min-width: 0;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.field-label {
+  font-size: 0.78em;
+  opacity: 0.75;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.4em;
+}
+
+.field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 0.78em;
+  opacity: 0.7;
+  margin: 0.2em 0 0;
+}
+
+.progress-section {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s ease-out;
+}
+
+.progress-text {
+  font-size: 0.78em;
+  opacity: 0.75;
+  margin: 0;
+}
+
+.status-message {
+  font-size: 0.82em;
+  margin: 0;
+  min-height: 1.2em;
+}

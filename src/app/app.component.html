@@ -1,0 +1,111 @@
+<div class="app-shell">
+  <header class="app-header">
+    <h1>Event Video Tool</h1>
+    <button type="button" class="ghost-btn" (click)="showTimeUtilities.set(true)">
+      Time Utilities
+    </button>
+  </header>
+
+  <div class="app-body">
+    <aside class="sidebar">
+      <section class="field-group">
+        <label class="field-label">Clip Directory</label>
+        <div class="field-row">
+          <input type="text" readonly [value]="clipDir() ?? ''" placeholder="Not selected" />
+          <button type="button" (click)="browseClipDir()">Browse</button>
+        </div>
+      </section>
+
+      <section class="field-group">
+        <label class="field-label">Output Directory</label>
+        <div class="field-row">
+          <input type="text" readonly [value]="outputDir() ?? ''" placeholder="Not selected" />
+          <button type="button" (click)="browseOutputDir()">Browse</button>
+        </div>
+      </section>
+
+      <section class="clip-list-section">
+        <app-clip-list
+          [clips]="clips()"
+          [selectedPath]="previewPath()"
+          (clipSelected)="selectClip($event)"
+        />
+      </section>
+
+      <button type="button" class="primary-btn" [disabled]="!canConcat()" (click)="concat()">
+        Concat Clips
+      </button>
+    </aside>
+
+    <main class="preview-pane">
+      <app-video-preview
+        [src]="previewUrl()"
+        [trimEnabled]="trimEnabled()"
+        (trimChange)="onTrimChange($event)"
+      />
+    </main>
+
+    <aside class="options-pane">
+      <section class="field-group">
+        <label class="checkbox-row">
+          <input type="checkbox" [checked]="mute()" (change)="mute.set(!mute())" />
+          Mute
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" [checked]="reEncode()" (change)="reEncode.set(!reEncode())" />
+          Re-encode
+        </label>
+        <label class="checkbox-row">
+          <input
+            type="checkbox"
+            [checked]="hwAcceleration()"
+            (change)="hwAcceleration.set(!hwAcceleration()); onHwAccelerationToggle()"
+          />
+          HW Acceleration
+        </label>
+        @if (hwAcceleration() && hwEncoderName() !== undefined) {
+          <p class="hint">
+            @if (hwEncoderName()) {
+              Will use hardware encoder: <code>{{ hwEncoderName() }}</code>
+            } @else {
+              No hardware encoder detected &mdash; falling back to libx264.
+            }
+          </p>
+        }
+      </section>
+
+      <section class="field-group">
+        <p class="hint">
+          @if (trimEnabled()) {
+            Drag the handles on the timeline to trim the concatenated video
+            before processing.
+          } @else {
+            Concat your clips, or select the concatenated output above, to
+            enable trimming.
+          }
+        </p>
+      </section>
+
+      <button type="button" class="primary-btn" [disabled]="!canProcess()" (click)="process()">
+        Process Video
+      </button>
+
+      <section class="progress-section">
+        @if (ffmpegEvents.running() && ffmpegEvents.progress(); as progress) {
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="progress.percentage"></div>
+          </div>
+          <p class="progress-text">
+            {{ progress.percentage.toFixed(1) }}% &middot; {{ progress.speed }}x speed &middot;
+            ETA {{ formatEta(progress.eta_secs) }}
+          </p>
+        }
+        <p class="status-message">{{ statusMessage() }}</p>
+      </section>
+    </aside>
+  </div>
+
+  @if (showTimeUtilities()) {
+    <app-time-utilities-dialog (closed)="showTimeUtilities.set(false)" />
+  }
+</div>
