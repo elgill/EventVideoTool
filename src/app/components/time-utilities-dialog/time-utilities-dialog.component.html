@@ -1,0 +1,46 @@
+<div class="backdrop" (click)="closed.emit()">
+  <div class="dialog" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <h2>Time Utilities</h2>
+      <button type="button" class="close-btn" (click)="closed.emit()">✕</button>
+    </div>
+
+    <div class="dialog-body">
+      <section>
+        <h3>Recording Time Offset</h3>
+        <label>
+          Actual Time of Event 1 (HH:MM:SS)
+          <input type="text" [(ngModel)]="actualTime1" />
+        </label>
+        <label>
+          Recording Time 1 (HH:MM:SS)
+          <input type="text" [(ngModel)]="recordingTime1" />
+        </label>
+        <label>
+          Actual Time of Event 2 (HH:MM:SS)
+          <input type="text" [(ngModel)]="actualTime2" />
+        </label>
+        <button type="button" (click)="calculateRecordingTime2()">
+          Calculate Recording Time 2
+        </button>
+        <label>
+          Recording Time 2
+          <input type="text" [value]="recordingTime2Result() ?? ''" readonly />
+        </label>
+      </section>
+
+      <section>
+        <h3>Time &harr; Seconds</h3>
+        <label>
+          Time (HH:MM:SS)
+          <input type="text" [(ngModel)]="timeToConvert" />
+        </label>
+        <button type="button" (click)="convertToSeconds()">Convert to Seconds</button>
+        <label>
+          Seconds
+          <input type="text" [value]="secondsResult() ?? ''" readonly />
+        </label>
+      </section>
+    </div>
+  </div>
+</div>
