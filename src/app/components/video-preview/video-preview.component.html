@@ -104,7 +104,7 @@
           Set to playhead <kbd>O</kbd>
         </button>
       </span>
-      <span class="trim-length">{{ formatHms(trimEnd() - trimStart()) }} long</span>
+      <span class="trim-length">{{ formatHms(trimEnd() - trimStart()) }} long ({{ trimLengthSecs() }}s)</span>
     </div>
   } @else {
     <div class="empty-preview">

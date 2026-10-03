@@ -68,6 +68,10 @@ export class VideoPreviewComponent {
   private slotClip: [number | null, number | null] = [null, null];
   private dragging: DragHandle = null;
 
+  /** Whole seconds, matching the HH:MM:SS shown beside it. */
+  readonly trimLengthSecs = computed(() =>
+    Math.max(0, Math.floor(this.trimEnd() - this.trimStart())).toLocaleString(),
+  );
   readonly currentEntry = computed(
     () => this.timeline().entries[this.currentClipIndex()] ?? null,
   );
