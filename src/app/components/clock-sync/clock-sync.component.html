@@ -1,0 +1,89 @@
+<section class="clock-sync">
+  <div class="header">
+    <button type="button" class="toggle" [attr.aria-expanded]="open()" (click)="toggle()">
+      <span class="chevron" aria-hidden="true">{{ open() ? "▾" : "▸" }}</span>
+      Find by race time
+    </button>
+    @if (playheadClock() !== null) {
+      <span class="playhead-clock">Race time here: {{ formatSignedHms(playheadClock()!) }}</span>
+    } @else if (!open()) {
+      <span class="muted">Optional &middot; jump to a runner using their finish time</span>
+    }
+  </div>
+
+  @if (open()) {
+    <ol class="steps">
+      <li [class.done]="!editingSync()">
+        <span class="step-num" aria-hidden="true">{{ editingSync() ? "1" : "✓" }}</span>
+        <div class="step-body">
+          @if (editingSync()) {
+            <div class="step-title">Sync with the race clock</div>
+            <p class="muted wrap">
+              Scrub to a moment you know the race time of (the start of the tape, or the
+              first finisher crossing the line) and enter that time.
+            </p>
+            <div class="row">
+              <span>Race time at video {{ formatHms(playheadSecs()) }}</span>
+              <app-time-input
+                label="Race time at the current frame"
+                [(value)]="syncDraft"
+                (enter)="syncToPlayhead()"
+              />
+              <button type="button" class="small primary" (click)="syncToPlayhead()">
+                Sync
+              </button>
+              @if (sync()) {
+                <button type="button" class="small link" (click)="cancelChangeSync()">
+                  Cancel
+                </button>
+              }
+            </div>
+          } @else if (sync(); as s) {
+            <div class="row">
+              <span>
+                Synced: race time <strong>{{ formatHms(s.clockSecs) }}</strong> is at video
+                {{ formatHms(s.videoSecs) }}
+              </span>
+              <button type="button" class="small link" (click)="changeSync()">Change</button>
+            </div>
+          }
+        </div>
+      </li>
+
+      <li [class.disabled]="!sync()">
+        <span class="step-num" aria-hidden="true">2</span>
+        <div class="step-body">
+          <div class="step-title">Find a runner</div>
+          @if (sync(); as s) {
+            <div class="row">
+              <span>Finish time</span>
+              <app-time-input
+                label="Race time to find"
+                [value]="findClock()"
+                (valueChange)="setFindClock($event)"
+                (enter)="goToFound()"
+              />
+              @if (found() !== null) {
+                <span class="muted">is at video {{ formatHms(found()!) }}</span>
+                <button type="button" class="small" (click)="goToFound()">Go</button>
+                <button type="button" class="small" (click)="setTrimStart.emit(found()!)">
+                  Start trim here
+                </button>
+                <button type="button" class="small" (click)="setTrimEnd.emit(found()!)">
+                  End trim here
+                </button>
+              } @else {
+                <span class="warn">
+                  Not in this video &mdash; it covers race times
+                  {{ formatSignedHms(videoRaceStart()) }} to {{ formatSignedHms(videoRaceEnd()) }}.
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="muted wrap">Once synced, type a finish time to jump straight to it.</p>
+          }
+        </div>
+      </li>
+    </ol>
+  }
+</section>

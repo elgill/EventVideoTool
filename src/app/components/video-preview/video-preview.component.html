@@ -69,7 +69,21 @@
     </div>
 
     <div class="trim-readout">
-      Trim: {{ formatHms(trimStart()) }} &ndash; {{ formatHms(trimEnd()) }}
+      Trim:
+      <app-time-input
+        label="Trim start"
+        [value]="trimStart()"
+        [max]="trimEnd() - MIN_TRIM_SECS"
+        (valueChange)="setTrim('start', $event)"
+      />
+      &ndash;
+      <app-time-input
+        label="Trim end"
+        [value]="trimEnd()"
+        [min]="trimStart() + MIN_TRIM_SECS"
+        [max]="duration()"
+        (valueChange)="setTrim('end', $event)"
+      />
       ({{ formatHms(trimEnd() - trimStart()) }})
     </div>
   } @else {

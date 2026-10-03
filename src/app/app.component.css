@@ -52,6 +52,15 @@
 .preview-pane {
   min-height: 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+.preview-pane app-video-preview {
+  display: block;
+  flex: 1;
+  min-height: 0;
 }
 
 .field-group {

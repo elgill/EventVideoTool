@@ -12,6 +12,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { formatHms } from "../../models";
+import { TimeInputComponent } from "../time-input/time-input.component";
 import { Timeline, locate } from "../../timeline";
 
 export interface TrimRange {
@@ -21,6 +22,9 @@ export interface TrimRange {
 
 type DragHandle = "start" | "end" | null;
 type Slot = 0 | 1;
+
+/** Shortest trim range the handles or typed times can make. */
+const MIN_TRIM_SECS = 0.1;
 
 /**
  * Plays a list of clips as if they were one video. Every time shown or
@@ -33,6 +37,7 @@ type Slot = 0 | 1;
 @Component({
   selector: "app-video-preview",
   standalone: true,
+  imports: [TimeInputComponent],
   templateUrl: "./video-preview.component.html",
   styleUrl: "./video-preview.component.css",
 })
@@ -57,6 +62,7 @@ export class VideoPreviewComponent {
   readonly activeSlot = signal<Slot>(0);
 
   readonly formatHms = formatHms;
+  readonly MIN_TRIM_SECS = MIN_TRIM_SECS;
 
   /** Clip index loaded into each slot. */
   private slotClip: [number | null, number | null] = [null, null];
@@ -175,6 +181,18 @@ export class VideoPreviewComponent {
     if (fraction !== null) this.seek(fraction * this.duration());
   }
 
+  /** Sets a trim point typed into the readout and shows that frame. */
+  setTrim(handle: "start" | "end", secs: number): void {
+    if (handle === "start") {
+      this.trimStart.set(clamp(secs, 0, this.trimEnd() - MIN_TRIM_SECS));
+      this.seek(this.trimStart());
+    } else {
+      this.trimEnd.set(clamp(secs, this.trimStart() + MIN_TRIM_SECS, this.duration()));
+      this.seek(this.trimEnd());
+    }
+    this.trimChange.emit({ startSecs: this.trimStart(), endSecs: this.trimEnd() });
+  }
+
   startDrag(handle: DragHandle, event: PointerEvent): void {
     event.stopPropagation();
     this.dragging = handle;
@@ -255,10 +273,10 @@ export class VideoPreviewComponent {
     const secs = fraction * this.duration();
 
     if (this.dragging === "start") {
-      this.trimStart.set(Math.min(secs, this.trimEnd() - 0.1));
+      this.trimStart.set(Math.min(secs, this.trimEnd() - MIN_TRIM_SECS));
       this.seek(this.trimStart());
     } else {
-      this.trimEnd.set(Math.max(secs, this.trimStart() + 0.1));
+      this.trimEnd.set(Math.max(secs, this.trimStart() + MIN_TRIM_SECS));
       this.seek(this.trimEnd());
     }
   }

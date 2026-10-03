@@ -66,6 +66,20 @@ describe("VideoPreviewComponent", () => {
     expect(preview.trimEnd()).toBe(200);
   });
 
+  it("applies a typed trim point, keeps start before end, and seeks to it", () => {
+    const preview = createWithTimeline().componentInstance;
+    const emitted: unknown[] = [];
+    preview.trimChange.subscribe((r) => emitted.push(r));
+
+    preview.setTrim("start", 120);
+    expect(preview.trimStart()).toBe(120);
+    expect(preview.currentTime()).toBe(120);
+
+    preview.setTrim("end", 60);
+    expect(preview.trimEnd()).toBeCloseTo(120.1);
+    expect(emitted.at(-1)).toEqual({ startSecs: 120, endSecs: preview.trimEnd() });
+  });
+
   it("computes trim handle and playhead percentages on the combined timeline", () => {
     const preview = createWithTimeline().componentInstance;
     preview.trimStart.set(50);

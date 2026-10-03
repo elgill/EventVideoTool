@@ -4,7 +4,7 @@ import {
   TrimRange,
   VideoPreviewComponent,
 } from "./components/video-preview/video-preview.component";
-import { TimeUtilitiesDialogComponent } from "./components/time-utilities-dialog/time-utilities-dialog.component";
+import { ClockSyncComponent } from "./components/clock-sync/clock-sync.component";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
 import { VideoToolService } from "./services/video-tool.service";
 import { ClipInfo, formatEta } from "./models";
@@ -19,7 +19,7 @@ const EMPTY_TIMELINE: Timeline = { entries: [], totalSecs: 0 };
 @Component({
   selector: "app-root",
   standalone: true,
-  imports: [ClipListComponent, VideoPreviewComponent, TimeUtilitiesDialogComponent],
+  imports: [ClipListComponent, VideoPreviewComponent, ClockSyncComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -57,7 +57,6 @@ export class AppComponent implements OnInit {
   readonly trimRange = signal<TrimRange | null>(null);
 
   readonly statusMessage = signal("Choose a clip directory to get started.");
-  readonly showTimeUtilities = signal(false);
   readonly busy = signal(false);
 
   readonly formatEta = formatEta;

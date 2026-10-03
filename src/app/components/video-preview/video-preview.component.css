@@ -131,3 +131,13 @@ video.inactive {
   opacity: 0.75;
   font-variant-numeric: tabular-nums;
 }
+
+.trim-readout {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.trim-readout app-time-input {
+  font-size: 1.15em;
+}
