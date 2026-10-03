@@ -10,8 +10,34 @@ import { VideoToolService } from "./services/video-tool.service";
 import { ClipInfo, formatEta } from "./models";
 import { Timeline, buildTimeline } from "./timeline";
 
+const LAST_EXPORT_DIR_KEY = "lastExportDir";
+
+/** Splits a Windows or POSIX path into its directory and final segment. */
+export function splitPath(path: string): { dir: string; name: string } {
+  const trimmed = path.replace(/[/\\]+$/, "");
+  const cut = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+  if (cut < 0) return { dir: "", name: trimmed };
+  // Keep the root's separator ("/" or "C:\") rather than leaving it empty.
+  const atRoot = cut === 0 || trimmed[cut - 1] === ":";
+  const dir = trimmed.slice(0, atRoot ? cut + 1 : cut);
+  return { dir, name: trimmed.slice(cut + 1) };
+}
+
 function joinPath(dir: string, fileName: string): string {
-  return /[/\\]$/.test(dir) ? `${dir}${fileName}` : `${dir}/${fileName}`;
+  if (!dir) return fileName;
+  const sep = dir.includes("\\") ? "\\" : "/";
+  return /[/\\]$/.test(dir) ? `${dir}${fileName}` : `${dir}${sep}${fileName}`;
+}
+
+/**
+ * Where the save dialog should start: the last folder exported to, else
+ * beside the clip folder (not inside it, where the export would be picked up
+ * as a clip next time), named after the clip folder.
+ */
+export function suggestExportPath(clipDir: string | null, lastExportDir: string | null): string {
+  const clipFolder = clipDir ? splitPath(clipDir) : null;
+  const name = `${clipFolder?.name || "exported_output"}.mp4`;
+  return joinPath(lastExportDir ?? clipFolder?.dir ?? "", name);
 }
 
 const EMPTY_TIMELINE: Timeline = { entries: [], totalSecs: 0 };
@@ -29,7 +55,6 @@ export class AppComponent implements OnInit {
   private readonly preview = viewChild(VideoPreviewComponent);
 
   readonly clipDir = signal<string | null>(null);
-  readonly outputDir = signal<string | null>(null);
   readonly clips = signal<ClipInfo[]>([]);
 
   /** Clips ffprobe couldn't read a duration for. Any of these makes the
@@ -61,14 +86,10 @@ export class AppComponent implements OnInit {
 
   readonly formatEta = formatEta;
 
-  readonly exportFilePath = computed(() => {
-    const dir = this.outputDir();
-    return dir ? joinPath(dir, "exported_output.mp4") : null;
-  });
+  /** The file the last successful export wrote, for "Show in folder". */
+  readonly lastExportPath = signal<string | null>(null);
 
-  readonly canExport = computed(
-    () => this.timeline().entries.length > 0 && this.outputDir() !== null && !this.busy(),
-  );
+  readonly canExport = computed(() => this.timeline().entries.length > 0 && !this.busy());
 
   constructor() {
     // A trim selection only means something for the clips it was made on.
@@ -89,12 +110,6 @@ export class AppComponent implements OnInit {
     if (!dir) return;
     this.clipDir.set(dir);
     await this.refreshClips();
-  }
-
-  async browseOutputDir(): Promise<void> {
-    const dir = await this.videoTool.pickDirectory();
-    if (!dir) return;
-    this.outputDir.set(dir);
   }
 
   async refreshClips(): Promise<void> {
@@ -138,8 +153,13 @@ export class AppComponent implements OnInit {
   }
 
   async exportVideo(): Promise<void> {
-    const outputFile = this.exportFilePath();
-    if (!outputFile || !this.canExport()) return;
+    if (!this.canExport()) return;
+    const picked = await this.videoTool.pickSaveFile(
+      suggestExportPath(this.clipDir(), readStored(LAST_EXPORT_DIR_KEY)),
+    );
+    if (!picked) return;
+    const outputFile = /[.]mp4$/i.test(picked) ? picked : `${picked}.mp4`;
+    writeStored(LAST_EXPORT_DIR_KEY, splitPath(outputFile).dir);
 
     const range = this.trimActive() ? this.trimRange() : null;
 
@@ -157,10 +177,32 @@ export class AppComponent implements OnInit {
         hwAcceleration: this.hwAcceleration(),
       });
       this.statusMessage.set(`Export completed successfully: ${outputFile}`);
+      this.lastExportPath.set(outputFile);
     } catch (err) {
       this.statusMessage.set(`Export failed: ${err}`);
     } finally {
       this.busy.set(false);
     }
+  }
+
+  async revealLastExport(): Promise<void> {
+    const path = this.lastExportPath();
+    if (path) await this.videoTool.revealInFolder(path).catch(() => {});
+  }
+}
+
+function readStored(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable; the dialog just won't remember the folder.
   }
 }

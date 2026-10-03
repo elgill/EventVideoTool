@@ -1,6 +1,7 @@
 import { Injectable } from "@angular/core";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { ClipInfo } from "../models";
 
 /** Thin wrapper around the Tauri commands defined in src-tauri/src/commands.rs. */
@@ -9,6 +10,16 @@ export class VideoToolService {
   async pickDirectory(): Promise<string | null> {
     const selection = await open({ directory: true, multiple: false });
     return typeof selection === "string" ? selection : null;
+  }
+
+  /** Asks where to save an MP4, starting from `defaultPath`. */
+  async pickSaveFile(defaultPath: string): Promise<string | null> {
+    return save({ defaultPath, filters: [{ name: "MP4 video", extensions: ["mp4"] }] });
+  }
+
+  /** Opens the file manager with `path` selected. */
+  revealInFolder(path: string): Promise<void> {
+    return revealItemInDir(path);
   }
 
   listClips(dir: string): Promise<ClipInfo[]> {

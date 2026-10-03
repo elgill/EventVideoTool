@@ -13,14 +13,6 @@
         </div>
       </section>
 
-      <section class="field-group">
-        <label class="field-label">Output Directory</label>
-        <div class="field-row">
-          <input type="text" readonly [value]="outputDir() ?? ''" placeholder="Not selected" />
-          <button type="button" (click)="browseOutputDir()">Browse</button>
-        </div>
-      </section>
-
       <section class="clip-list-section">
         <app-clip-list
           [clips]="clips()"
@@ -87,7 +79,7 @@
       </section>
 
       <button type="button" class="primary-btn" [disabled]="!canExport()" (click)="exportVideo()">
-        Export Video
+        Export Video&hellip;
       </button>
 
       <section class="progress-section">
@@ -101,6 +93,11 @@
           </p>
         }
         <p class="status-message">{{ statusMessage() }}</p>
+        @if (lastExportPath() && !busy()) {
+          <button type="button" class="ghost-btn reveal-btn" (click)="revealLastExport()">
+            Show in folder
+          </button>
+        }
       </section>
     </aside>
   </div>

@@ -124,6 +124,12 @@
   margin: 0;
 }
 
+.reveal-btn {
+  align-self: flex-start;
+  padding: 0.3em 0.8em;
+  font-size: 0.82em;
+}
+
 .status-message {
   font-size: 0.82em;
   margin: 0;
