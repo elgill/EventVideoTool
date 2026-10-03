@@ -43,8 +43,6 @@
           [playheadSecs]="player.currentTime()"
           [durationSecs]="player.duration()"
           (seek)="player.seek($event)"
-          (setTrimStart)="player.setTrim('start', $event)"
-          (setTrimEnd)="player.setTrim('end', $event)"
         />
       }
     </main>
@@ -81,7 +79,7 @@
       <section class="field-group">
         <p class="hint">
           The preview plays every clip back to back as one video. Drag the
-          handles on its timeline (or type the times below it) to trim; Export
+          handles, type times, or press I/O at the playhead to trim; Export
           joins and trims the clips in a single pass.
         </p>
       </section>

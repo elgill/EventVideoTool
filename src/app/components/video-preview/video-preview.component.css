@@ -127,17 +127,43 @@ video.inactive {
 }
 
 .trim-readout {
-  font-size: 0.8em;
-  opacity: 0.75;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5em 1.4em;
+  font-size: 0.85em;
   font-variant-numeric: tabular-nums;
 }
 
-.trim-readout {
+.trim-point {
   display: flex;
   align-items: center;
   gap: 0.4em;
 }
 
+.trim-label {
+  opacity: 0.7;
+}
+
 .trim-readout app-time-input {
-  font-size: 1.15em;
+  font-size: 1.05em;
+}
+
+.mark-btn {
+  padding: 0.3em 0.6em;
+  font-size: 0.95em;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 0.8em;
+  padding: 0 0.35em;
+  margin-left: 0.2em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  opacity: 0.75;
+}
+
+.trim-length {
+  opacity: 0.7;
 }

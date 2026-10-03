@@ -54,7 +54,7 @@
         <span class="step-num" aria-hidden="true">2</span>
         <div class="step-body">
           <div class="step-title">Find a runner</div>
-          @if (sync(); as s) {
+          @if (sync()) {
             <div class="row">
               <span>Finish time</span>
               <app-time-input
@@ -66,12 +66,6 @@
               @if (found() !== null) {
                 <span class="muted">is at video {{ formatHms(found()!) }}</span>
                 <button type="button" class="small" (click)="goToFound()">Go</button>
-                <button type="button" class="small" (click)="setTrimStart.emit(found()!)">
-                  Start trim here
-                </button>
-                <button type="button" class="small" (click)="setTrimEnd.emit(found()!)">
-                  End trim here
-                </button>
               } @else {
                 <span class="warn">
                   Not in this video &mdash; it covers race times
@@ -79,6 +73,10 @@
                 </span>
               }
             </div>
+            <p class="muted wrap">
+              Fine-tune with <kbd>&larr;</kbd>/<kbd>&rarr;</kbd>, then trim with
+              <kbd>I</kbd>/<kbd>O</kbd> or the &ldquo;Set to playhead&rdquo; buttons above.
+            </p>
           } @else {
             <p class="muted wrap">Once synced, type a finish time to jump straight to it.</p>
           }

@@ -136,3 +136,11 @@ button.link {
   color: var(--accent);
   padding-inline: 0.3em;
 }
+
+kbd {
+  font-family: inherit;
+  font-size: 0.85em;
+  padding: 0 0.35em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}

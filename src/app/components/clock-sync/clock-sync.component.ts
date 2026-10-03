@@ -34,8 +34,9 @@ export function formatSignedHms(secs: number): string {
  * Optional helper for finding runners by their race time. The user syncs once
  * by entering the race time of whatever frame is on screen (the start of the
  * tape, or the first finisher crossing), then types any finish time from the
- * results to jump straight to it and trim around it. Collapses to one line
- * when not in use.
+ * results to jump straight to it. Trimming is left to the preview's
+ * "Set to playhead" controls, so the user can fine-tune the spot first.
+ * Collapses to one line when not in use.
  */
 @Component({
   selector: "app-clock-sync",
@@ -48,8 +49,6 @@ export class ClockSyncComponent {
   readonly playheadSecs = input(0);
   readonly durationSecs = input(0);
   readonly seek = output<number>();
-  readonly setTrimStart = output<number>();
-  readonly setTrimEnd = output<number>();
 
   readonly formatHms = formatHms;
   readonly formatSignedHms = formatSignedHms;

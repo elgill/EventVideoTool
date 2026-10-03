@@ -69,22 +69,42 @@
     </div>
 
     <div class="trim-readout">
-      Trim:
-      <app-time-input
-        label="Trim start"
-        [value]="trimStart()"
-        [max]="trimEnd() - MIN_TRIM_SECS"
-        (valueChange)="setTrim('start', $event)"
-      />
-      &ndash;
-      <app-time-input
-        label="Trim end"
-        [value]="trimEnd()"
-        [min]="trimStart() + MIN_TRIM_SECS"
-        [max]="duration()"
-        (valueChange)="setTrim('end', $event)"
-      />
-      ({{ formatHms(trimEnd() - trimStart()) }})
+      <span class="trim-point">
+        <span class="trim-label">Start</span>
+        <app-time-input
+          label="Trim start"
+          [value]="trimStart()"
+          [max]="trimEnd() - MIN_TRIM_SECS"
+          (valueChange)="setTrim('start', $event)"
+        />
+        <button
+          type="button"
+          class="mark-btn"
+          title="Trim start at the playhead (I)"
+          (click)="markAtPlayhead('start')"
+        >
+          Set to playhead <kbd>I</kbd>
+        </button>
+      </span>
+      <span class="trim-point">
+        <span class="trim-label">End</span>
+        <app-time-input
+          label="Trim end"
+          [value]="trimEnd()"
+          [min]="trimStart() + MIN_TRIM_SECS"
+          [max]="duration()"
+          (valueChange)="setTrim('end', $event)"
+        />
+        <button
+          type="button"
+          class="mark-btn"
+          title="Trim end at the playhead (O)"
+          (click)="markAtPlayhead('end')"
+        >
+          Set to playhead <kbd>O</kbd>
+        </button>
+      </span>
+      <span class="trim-length">{{ formatHms(trimEnd() - trimStart()) }} long</span>
     </div>
   } @else {
     <div class="empty-preview">

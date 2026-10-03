@@ -115,11 +115,14 @@ export class VideoPreviewComponent {
 
     const onMove = (e: PointerEvent) => this.onPointerMove(e);
     const onUp = () => this.onPointerUp();
+    const onKey = (e: KeyboardEvent) => this.onKeyDown(e);
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
+    document.addEventListener("keydown", onKey);
     inject(DestroyRef).onDestroy(() => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("keydown", onKey);
     });
   }
 
@@ -191,6 +194,28 @@ export class VideoPreviewComponent {
       this.seek(this.trimEnd());
     }
     this.trimChange.emit({ startSecs: this.trimStart(), endSecs: this.trimEnd() });
+  }
+
+  /**
+   * Trims at the frame on screen, without moving the playhead. Marking past
+   * the other trim point moves that one out of the way (to the very start or
+   * end) instead of getting stuck against it.
+   */
+  markAtPlayhead(handle: "start" | "end"): void {
+    const at = this.currentTime();
+    if (handle === "start") {
+      if (at > this.trimEnd() - MIN_TRIM_SECS) this.trimEnd.set(this.duration());
+      this.trimStart.set(clamp(at, 0, this.trimEnd() - MIN_TRIM_SECS));
+    } else {
+      if (at < this.trimStart() + MIN_TRIM_SECS) this.trimStart.set(0);
+      this.trimEnd.set(clamp(at, this.trimStart() + MIN_TRIM_SECS, this.duration()));
+    }
+    this.trimChange.emit({ startSecs: this.trimStart(), endSecs: this.trimEnd() });
+  }
+
+  /** Moves the playhead by `deltaSecs`, for fine-tuning a spot. */
+  nudge(deltaSecs: number): void {
+    this.seek(clamp(this.currentTime() + deltaSecs, 0, this.duration()));
   }
 
   startDrag(handle: DragHandle, event: PointerEvent): void {
@@ -279,6 +304,34 @@ export class VideoPreviewComponent {
       this.trimEnd.set(Math.max(secs, this.trimStart() + MIN_TRIM_SECS));
       this.seek(this.trimEnd());
     }
+  }
+
+  /** I/O mark trim points and ←/→ nudge, unless typing somewhere. */
+  private onKeyDown(event: KeyboardEvent): void {
+    if (this.timeline().entries.length === 0) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("input, textarea, select, [contenteditable]")) {
+      return;
+    }
+
+    switch (event.key.toLowerCase()) {
+      case "i":
+        this.markAtPlayhead("start");
+        break;
+      case "o":
+        this.markAtPlayhead("end");
+        break;
+      case "arrowleft":
+        this.nudge(event.shiftKey ? -5 : -1);
+        break;
+      case "arrowright":
+        this.nudge(event.shiftKey ? 5 : 1);
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
   }
 
   private onPointerUp(): void {

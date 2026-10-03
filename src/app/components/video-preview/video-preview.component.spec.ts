@@ -80,6 +80,54 @@ describe("VideoPreviewComponent", () => {
     expect(emitted.at(-1)).toEqual({ startSecs: 120, endSecs: preview.trimEnd() });
   });
 
+  it("marks trim points at the playhead without moving it", () => {
+    const preview = createWithTimeline().componentInstance;
+    preview.seek(30);
+
+    preview.markAtPlayhead("start");
+    preview.seek(120);
+    preview.markAtPlayhead("end");
+
+    expect(preview.trimStart()).toBe(30);
+    expect(preview.trimEnd()).toBe(120);
+    expect(preview.currentTime()).toBe(120);
+  });
+
+  it("moves the other trim point out of the way when marking past it", () => {
+    const preview = createWithTimeline().componentInstance;
+    preview.seek(30);
+    preview.markAtPlayhead("end");
+    preview.seek(60);
+
+    preview.markAtPlayhead("start");
+
+    expect(preview.trimStart()).toBe(60);
+    expect(preview.trimEnd()).toBe(200);
+  });
+
+  it("marks with I/O and nudges with the arrow keys, but not while typing", () => {
+    const fixture = createWithTimeline();
+    const preview = fixture.componentInstance;
+    const press = (key: string, target: EventTarget = document, shiftKey = false) =>
+      target.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true }));
+
+    preview.seek(30);
+    press("ArrowRight");
+    press("ArrowRight", document, true);
+    expect(preview.currentTime()).toBe(36);
+    press("i");
+    expect(preview.trimStart()).toBe(36);
+
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    press("o", input);
+    expect(preview.trimEnd()).toBe(200);
+    press("ArrowRight");
+    press("O");
+    expect(preview.trimEnd()).toBe(37);
+    input.remove();
+  });
+
   it("computes trim handle and playhead percentages on the combined timeline", () => {
     const preview = createWithTimeline().componentInstance;
     preview.trimStart.set(50);
