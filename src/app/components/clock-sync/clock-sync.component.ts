@@ -3,6 +3,8 @@ import { formatHms } from "../../models";
 import { TimeInputComponent } from "../time-input/time-input.component";
 
 const OPEN_KEY = "clockSync.open";
+const BUFFER_KEY = "clockSync.bufferSecs";
+const DEFAULT_BUFFER_SECS = 5;
 
 /** A moment known both by race-clock time and by position in the video. */
 export interface ClockReference {
@@ -23,6 +25,27 @@ export function clockToVideo(
 /** The race time at `videoSecs`; negative before the race clock's zero. */
 export function videoToClock(ref: ClockReference, videoSecs: number): number {
   return ref.clockSecs + (videoSecs - ref.videoSecs);
+}
+
+/**
+ * What to enter on a results site that syncs video to finish times: the
+ * uploaded video's length, and its offset — the race time at its first frame,
+ * which the site subtracts from a finish time to find that runner. Adding the
+ * buffer to the offset makes every runner play `bufferSecs` early, so viewers
+ * see them coming in rather than starting on the line.
+ */
+export function onlineSyncValues(
+  ref: ClockReference,
+  trimStartSecs: number,
+  trimEndSecs: number,
+  bufferSecs: number,
+): { lengthSecs: number; firstFrameRaceSecs: number; offsetSecs: number } {
+  const firstFrameRaceSecs = Math.round(videoToClock(ref, trimStartSecs));
+  return {
+    lengthSecs: Math.max(0, Math.floor(trimEndSecs - trimStartSecs)),
+    firstFrameRaceSecs,
+    offsetSecs: firstFrameRaceSecs + bufferSecs,
+  };
 }
 
 /** Like formatHms, but keeps the sign (tapes often start before the gun). */
@@ -48,12 +71,16 @@ export function formatSignedHms(secs: number): string {
 export class ClockSyncComponent {
   readonly playheadSecs = input(0);
   readonly durationSecs = input(0);
+  /** The part of the video Export will write. */
+  readonly trimStartSecs = input(0);
+  readonly trimEndSecs = input(0);
   readonly seek = output<number>();
 
   readonly formatHms = formatHms;
   readonly formatSignedHms = formatSignedHms;
 
-  readonly open = signal(readOpen());
+  readonly open = signal(readStored(OPEN_KEY) === "true");
+  readonly bufferSecs = signal(readBuffer());
   /** The race time being entered for the frame on screen. */
   readonly syncDraft = signal(0);
   readonly sync = signal<ClockReference | null>(null);
@@ -81,13 +108,30 @@ export class ClockSyncComponent {
     return sync ? videoToClock(sync, this.durationSecs()) : 0;
   });
 
+  readonly online = computed(() => {
+    const sync = this.sync();
+    return sync
+      ? onlineSyncValues(sync, this.trimStartSecs(), this.trimEndSecs(), this.bufferSecs())
+      : null;
+  });
+  /** Where the site will start the runner last searched for, in the uploaded
+   * video; null if they aren't in it. */
+  readonly examplePlayAt = computed(() => {
+    const online = this.online();
+    if (!online) return null;
+    const crossesAt = this.findClock() - online.firstFrameRaceSecs;
+    if (crossesAt < 0 || crossesAt > online.lengthSecs) return null;
+    return this.findClock() - online.offsetSecs;
+  });
+
   constructor() {
     effect(() => {
       const open = this.open();
       try {
         localStorage.setItem(OPEN_KEY, String(open));
+        localStorage.setItem(BUFFER_KEY, String(this.bufferSecs()));
       } catch {
-        // Storage unavailable; the panel just won't remember its state.
+        // Storage unavailable; the panel just won't remember its settings.
       }
     });
   }
@@ -120,6 +164,15 @@ export class ClockSyncComponent {
     this.editingSync.set(false);
   }
 
+  setBuffer(raw: string): void {
+    const secs = Math.round(Number(raw));
+    this.bufferSecs.set(Number.isFinite(secs) ? Math.max(0, secs) : 0);
+  }
+
+  copy(value: number): void {
+    navigator.clipboard?.writeText(String(value)).catch(() => {});
+  }
+
   goToFound(): void {
     const found = this.found();
     if (found !== null) this.seek.emit(found);
@@ -134,10 +187,15 @@ export class ClockSyncComponent {
   }
 }
 
-function readOpen(): boolean {
+function readStored(key: string): string | null {
   try {
-    return localStorage.getItem(OPEN_KEY) === "true";
+    return localStorage.getItem(key);
   } catch {
-    return false;
+    return null;
   }
+}
+
+function readBuffer(): number {
+  const stored = Number(readStored(BUFFER_KEY) ?? NaN);
+  return Number.isFinite(stored) && stored >= 0 ? stored : DEFAULT_BUFFER_SECS;
 }

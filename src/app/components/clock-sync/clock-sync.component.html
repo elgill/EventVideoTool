@@ -7,7 +7,9 @@
     @if (playheadClock() !== null) {
       <span class="playhead-clock">Race time here: {{ formatSignedHms(playheadClock()!) }}</span>
     } @else if (!open()) {
-      <span class="muted">Optional &middot; jump to a runner using their finish time</span>
+      <span class="muted">
+        Optional &middot; jump to runners by finish time, get online sync values
+      </span>
     }
   </div>
 
@@ -79,6 +81,61 @@
             </p>
           } @else {
             <p class="muted wrap">Once synced, type a finish time to jump straight to it.</p>
+          }
+        </div>
+      </li>
+
+      <li [class.disabled]="!sync()">
+        <span class="step-num" aria-hidden="true">3</span>
+        <div class="step-body">
+          <div class="step-title">Online sync values</div>
+          @if (online(); as o) {
+            <p class="muted wrap">For the exported video (the trimmed part). Enter these on the site:</p>
+            <dl class="values">
+              <dt>Video length</dt>
+              <dd>
+                <strong>{{ o.lengthSecs.toLocaleString() }}</strong> s
+                <button type="button" class="small link" (click)="copy(o.lengthSecs)">Copy</button>
+              </dd>
+
+              <dt>Race offset</dt>
+              <dd>
+                <strong>{{ o.offsetSecs.toLocaleString() }}</strong> s
+                <button type="button" class="small link" (click)="copy(o.offsetSecs)">Copy</button>
+                <span class="muted breakdown">
+                  = {{ o.firstFrameRaceSecs.toLocaleString() }} s (race time at the first frame)
+                  + {{ bufferSecs() }} s buffer
+                </span>
+              </dd>
+
+              <dt><label for="buffer">Buffer</label></dt>
+              <dd>
+                Start each runner
+                <input
+                  id="buffer"
+                  class="buffer-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  [value]="bufferSecs()"
+                  (input)="setBuffer($any($event.target).value)"
+                />
+                s before they cross the line
+                <span class="muted">(already included in the offset)</span>
+              </dd>
+            </dl>
+            @if (examplePlayAt() !== null) {
+              <p class="example">
+                Check: a runner who finished at {{ formatSignedHms(findClock()) }} should start
+                playing at {{ formatSignedHms(examplePlayAt()!) }} into the uploaded video,
+                {{ bufferSecs() }} s before they reach the line.
+              </p>
+            }
+          } @else {
+            <p class="muted wrap">
+              Once synced, this shows the length and race offset (in seconds) to enter
+              when uploading, with an optional buffer.
+            </p>
           }
         </div>
       </li>

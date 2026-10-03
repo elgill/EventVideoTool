@@ -4,6 +4,7 @@ import {
   ClockSyncComponent,
   clockToVideo,
   formatSignedHms,
+  onlineSyncValues,
   videoToClock,
 } from "./clock-sync.component";
 
@@ -32,6 +33,32 @@ describe("videoToClock", () => {
     const gun = { clockSecs: 0, videoSecs: t("00:02:00") };
     expect(videoToClock(gun, 0)).toBe(-t("00:02:00"));
     expect(formatSignedHms(videoToClock(gun, 0))).toBe("-00:02:00");
+  });
+});
+
+describe("onlineSyncValues", () => {
+  // The first finisher crossed at race time 25:34, 12:03 into the tape.
+  const ref = { clockSecs: t("00:25:34"), videoSecs: t("00:12:03") };
+
+  it("gives the trimmed length and the race time at its first frame", () => {
+    // Trimmed to start 2:00 before the first finisher.
+    const v = onlineSyncValues(ref, t("00:10:03"), t("01:00:08"), 0);
+    expect(v.lengthSecs).toBe(t("00:50:05"));
+    expect(v.firstFrameRaceSecs).toBe(t("00:23:34"));
+    expect(v.offsetSecs).toBe(t("00:23:34"));
+  });
+
+  it("adds the buffer to the offset so runners play early", () => {
+    const v = onlineSyncValues(ref, t("00:10:03"), t("01:00:08"), 5);
+    expect(v.offsetSecs).toBe(t("00:23:34") + 5);
+    // The site plays a runner at finish - offset: 5 s before they cross.
+    const crossesAt = t("00:25:34") - v.firstFrameRaceSecs;
+    expect(t("00:25:34") - v.offsetSecs).toBe(crossesAt - 5);
+  });
+
+  it("goes negative when the export starts before the gun", () => {
+    const gun = { clockSecs: 0, videoSecs: t("00:02:00") };
+    expect(onlineSyncValues(gun, 0, t("00:30:00"), 5).offsetSecs).toBe(-115);
   });
 });
 
@@ -83,5 +110,20 @@ describe("ClockSyncComponent", () => {
 
     expect(sync.editingSync()).toBe(true);
     expect(sync.syncDraft()).toBe(t("00:26:34"));
+  });
+
+  it("explains the buffer with the runner last searched for", () => {
+    const { fixture, sync } = create();
+    fixture.componentRef.setInput("trimStartSecs", t("00:10:03"));
+    fixture.componentRef.setInput("trimEndSecs", t("01:00:00"));
+    sync.syncDraft.set(t("00:25:34"));
+    sync.syncToPlayhead();
+    sync.bufferSecs.set(5);
+
+    // Crosses 2:00 into the export, so plays from 1:55.
+    expect(sync.examplePlayAt()).toBe(t("00:01:55"));
+
+    sync.setFindClock(t("00:10:00")); // before the export starts
+    expect(sync.examplePlayAt()).toBeNull();
   });
 });

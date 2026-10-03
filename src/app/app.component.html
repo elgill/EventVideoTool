@@ -42,6 +42,8 @@
         <app-clock-sync
           [playheadSecs]="player.currentTime()"
           [durationSecs]="player.duration()"
+          [trimStartSecs]="player.trimStart()"
+          [trimEndSecs]="player.trimEnd()"
           (seek)="player.seek($event)"
         />
       }
