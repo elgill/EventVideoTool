@@ -12,8 +12,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::detect_hw_encoder,
             commands::list_clips,
-            commands::concat_clips,
-            commands::process_video,
+            commands::export_video,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

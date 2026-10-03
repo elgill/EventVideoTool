@@ -19,20 +19,19 @@ export class VideoToolService {
     return invoke<string | null>("detect_hw_encoder");
   }
 
-  concatClips(clipDir: string, outputFile: string): Promise<void> {
-    return invoke<void>("concat_clips", { clipDir, outputFile });
-  }
-
-  processVideo(args: {
-    inputFile: string;
+  /** Concatenates, trims, mutes, and/or re-encodes `clips` into
+   * `outputFile` in one pass. `startSecs`/`endSecs` are positions on the
+   * combined timeline of `clips`; null means its start/end. */
+  exportVideo(args: {
+    clips: ClipInfo[];
     outputFile: string;
-    startTime: string | null;
-    endTime: string | null;
+    startSecs: number | null;
+    endSecs: number | null;
     mute: boolean;
     reEncode: boolean;
     hwAcceleration: boolean;
   }): Promise<void> {
-    return invoke<void>("process_video", args);
+    return invoke<void>("export_video", args);
   }
 
   /** Converts a local filesystem path into a URL the webview can load. */

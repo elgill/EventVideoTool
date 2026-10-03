@@ -6,13 +6,31 @@
   min-height: 0;
 }
 
-video {
+.stage {
+  position: relative;
   flex: 1;
   min-height: 0;
-  width: 100%;
   background: #000;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.stage.empty {
+  display: none;
+}
+
+video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+}
+
+/* The slot preloading the next clip: kept laid out (so it actually loads
+   and decodes) but not shown. */
+video.inactive {
+  visibility: hidden;
 }
 
 .empty-preview {
@@ -32,10 +50,18 @@ video {
   gap: 0.8em;
 }
 
-.time-readout {
+.time-readout,
+.clip-readout {
   font-variant-numeric: tabular-nums;
   font-size: 0.85em;
   opacity: 0.8;
+}
+
+.clip-readout {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .track {
@@ -54,6 +80,17 @@ video {
   transform: translateY(-50%);
   background: var(--surface-hover);
   border-radius: 3px;
+}
+
+.clip-boundary {
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 14px;
+  transform: translate(-0.5px, -50%);
+  background: var(--text);
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .trim-range {

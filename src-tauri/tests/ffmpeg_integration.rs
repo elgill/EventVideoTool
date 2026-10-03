@@ -5,11 +5,12 @@
 //!
 //! This is the strongest verification available in a headless environment:
 //! it can't drive the actual GUI window, but it proves the bundled binaries
-//! run, that concat/trim/mute/re-encode produce correct output, and that
-//! progress reporting reaches 100%.
+//! run, that a single-pass concat/trim/mute/re-encode export produces
+//! correct output, and that progress reporting reaches 100%.
 
 use eventvideotool_app_lib::clips;
-use eventvideotool_app_lib::ffmpeg::args::{build_concat_args, build_process_args, ProcessOptions};
+use eventvideotool_app_lib::clips::ClipInfo;
+use eventvideotool_app_lib::ffmpeg::args::{build_export_args, ExportOptions};
 use eventvideotool_app_lib::ffmpeg::progress::ProgressParser;
 
 use std::io::{BufRead, BufReader};
@@ -140,8 +141,46 @@ fn has_audio_stream(ffprobe_path: &Path, file: &Path) -> bool {
     !String::from_utf8_lossy(&output.stdout).trim().is_empty()
 }
 
+/// Plans, writes, and runs an export exactly like the `export_video`
+/// command does, returning the output path and final progress percentage.
+#[allow(clippy::too_many_arguments)]
+fn export(
+    ffmpeg_path: &Path,
+    dir: &Path,
+    clip_infos: &[ClipInfo],
+    name: &str,
+    start_secs: Option<f64>,
+    end_secs: Option<f64>,
+    mute: bool,
+    re_encode: bool,
+) -> (PathBuf, f64) {
+    let segments = clips::plan_segments(clip_infos, start_secs, end_secs).unwrap();
+    let filelist_path = clips::temp_filelist_path();
+    clips::write_filelist(&filelist_path, &segments).unwrap();
+
+    // Joined the way the frontend's `joinPath` does it: with a `/`, even on
+    // Windows. That mixed-separator path once leaked into the filelist's
+    // location and broke clip path resolution, so keep exercising it.
+    let output_file = format!("{}/{name}.mp4", dir.display());
+    let output = PathBuf::from(&output_file);
+    let args = build_export_args(&ExportOptions {
+        filelist_path: &filelist_path,
+        seek_secs: segments[0].inpoint,
+        output_file: &output_file,
+        mute,
+        re_encode,
+        hw_acceleration: false,
+        hw_encoder: None,
+    });
+    let final_percentage =
+        run_ffmpeg_and_track_progress(ffmpeg_path, args, clips::segments_duration_secs(&segments));
+    let _ = std::fs::remove_file(&filelist_path);
+    assert!(output.exists(), "{name} output was not created");
+    (output, final_percentage)
+}
+
 #[test]
-fn concat_then_trim_and_mute_end_to_end() {
+fn export_concats_trims_and_mutes_in_one_pass() {
     let ffmpeg_path = find_sidecar("ffmpeg");
     let ffprobe_path = find_sidecar("ffprobe");
 
@@ -163,62 +202,50 @@ fn concat_then_trim_and_mute_end_to_end() {
         assert!((d - 2.0).abs() < 0.3, "unexpected clip duration: {d}");
     }
 
-    // --- concat (same code path concat_clips uses) ---
-    let filelist_path = clips::write_filelist(dir.path(), &discovered).unwrap();
-    let total_duration = clips::total_duration_secs(&discovered);
-    assert!((total_duration - 4.0).abs() < 0.5);
-
-    let concat_output = dir.path().join("concatenated.mp4");
-    let concat_args = build_concat_args(&filelist_path, &concat_output.to_string_lossy());
-    let final_percentage = run_ffmpeg_and_track_progress(&ffmpeg_path, concat_args, total_duration);
-
-    assert!(
-        concat_output.exists(),
-        "concatenated output was not created"
+    // --- untrimmed stream-copy export: the old "concat" step on its own ---
+    let (full, final_percentage) = export(
+        &ffmpeg_path,
+        dir.path(),
+        &discovered,
+        "full",
+        None,
+        None,
+        false,
+        false,
     );
     assert!(
         final_percentage >= 99.0,
-        "expected concat to reach ~100%, got {final_percentage}"
+        "expected full export to reach ~100%, got {final_percentage}"
     );
-
-    let concatenated_duration = clips::probe_duration_secs(&ffprobe_path, &concat_output).unwrap();
+    let full_duration = clips::probe_duration_secs(&ffprobe_path, &full).unwrap();
     assert!(
-        (concatenated_duration - 4.0).abs() < 0.5,
-        "expected concatenated clip to be ~4s, got {concatenated_duration}"
+        (full_duration - 4.0).abs() < 0.5,
+        "expected full export to be ~4s, got {full_duration}"
     );
-    assert!(has_audio_stream(&ffprobe_path, &concat_output));
+    assert!(has_audio_stream(&ffprobe_path, &full));
 
-    // --- trim + mute + re-encode (same code path process_video uses) ---
-    let processed_output = dir.path().join("processed.mp4");
-    let opts = ProcessOptions {
-        input_file: concat_output.to_str().unwrap(),
-        output_file: processed_output.to_str().unwrap(),
-        start_time: Some("00:00:00"),
-        end_time: Some("00:00:02"),
-        mute: true,
-        re_encode: true,
-        hw_acceleration: false,
-        hw_encoder: None,
-    };
-    let process_args = build_process_args(&opts);
-    let final_percentage = run_ffmpeg_and_track_progress(&ffmpeg_path, process_args, 2.0);
-
-    assert!(
-        processed_output.exists(),
-        "processed output was not created"
+    // --- trim across the clip boundary (1s..3s) + mute + re-encode ---
+    let (trimmed, final_percentage) = export(
+        &ffmpeg_path,
+        dir.path(),
+        &discovered,
+        "trimmed",
+        Some(1.0),
+        Some(3.0),
+        true,
+        true,
     );
     assert!(
         final_percentage >= 99.0,
-        "expected process to reach ~100%, got {final_percentage}"
+        "expected trimmed export to reach ~100%, got {final_percentage}"
     );
-
-    let processed_duration = clips::probe_duration_secs(&ffprobe_path, &processed_output).unwrap();
+    let trimmed_duration = clips::probe_duration_secs(&ffprobe_path, &trimmed).unwrap();
     assert!(
-        (processed_duration - 2.0).abs() < 0.3,
-        "expected trimmed clip to be ~2s, got {processed_duration}"
+        (trimmed_duration - 2.0).abs() < 0.3,
+        "expected trimmed export to be ~2s, got {trimmed_duration}"
     );
     assert!(
-        !has_audio_stream(&ffprobe_path, &processed_output),
+        !has_audio_stream(&ffprobe_path, &trimmed),
         "expected -an to strip the audio stream"
     );
 }

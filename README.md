@@ -10,16 +10,18 @@ reference in [`legacy-python/`](./legacy-python)). See
 
 ## Features
 
-- Pick a clip directory and concatenate every `.mp4` clip in it (sorted by
-  name), matching the original's GoPro-clip-joining workflow.
-- In-app video preview (play/pause/seek) for both individual clips and the
-  concatenated output — the original only opened files in your system video
-  player.
-- A draggable trim timeline on the concatenated output, instead of typing
-  `HH:MM:SS` blind.
+- Pick a clip directory and every `.mp4` clip in it (sorted by name) is
+  previewed back to back as one video, matching the original's
+  GoPro-clip-joining workflow — the original only opened files in your
+  system video player.
+- A draggable trim timeline across all the clips (with clip boundaries
+  marked), instead of typing `HH:MM:SS` blind. Clicking a clip in the list
+  jumps to it.
+- A single Export step that joins, trims, mutes, and/or re-encodes in one
+  ffmpeg pass, with no intermediate concatenated file.
 - Mute, re-encode, and hardware-acceleration options, with the actual
   detected hardware encoder shown in the UI.
-- A live, working progress bar with speed/ETA during concat and processing.
+- A live, working progress bar with speed/ETA during export.
 - Time Utilities dialog for converting between a recording's internal
   timestamp and real-world event time.
 - ffmpeg/ffprobe are bundled automatically — see below.
@@ -56,7 +58,7 @@ npm run tauri dev     # launches the app with hot reload
 ```sh
 # Rust: pure-logic unit tests + an end-to-end integration test that runs
 # the real bundled ffmpeg/ffprobe binaries against synthetic video
-# (concat -> trim -> mute -> re-encode) and checks the output.
+# (a single-pass concat + trim + mute + re-encode export) and checks the output.
 cd src-tauri && cargo test
 
 # Angular: unit tests (Vitest + jsdom, no browser required)

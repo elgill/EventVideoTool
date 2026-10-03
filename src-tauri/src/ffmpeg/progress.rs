@@ -1,7 +1,5 @@
 //! Parses ffmpeg's `-progress pipe:1 -nostats` machine-readable output
-//! (repeated `key=value` lines) into incremental progress snapshots, and the
-//! small time-string helpers needed to figure out how long a trimmed clip
-//! will be before ffmpeg tells us.
+//! (repeated `key=value` lines) into incremental progress snapshots.
 
 /// A point-in-time read of an in-progress ffmpeg run. Mirrors what the
 /// original Python `FfmpegWrapper._update_progress` reported to its
@@ -108,75 +106,9 @@ impl ProgressParser {
     }
 }
 
-/// Parses `HH:MM:SS`, `MM:SS`, or `SS` into total seconds.
-pub fn parse_time_str(time_str: &str) -> Result<f64, String> {
-    let parts: Vec<&str> = time_str.split(':').collect();
-    let nums: Result<Vec<f64>, _> = parts.iter().map(|p| p.parse::<f64>()).collect();
-    let nums = nums.map_err(|_| format!("invalid time string: {time_str}"))?;
-
-    match nums.len() {
-        3 => Ok(nums[0] * 3600.0 + nums[1] * 60.0 + nums[2]),
-        2 => Ok(nums[0] * 60.0 + nums[1]),
-        1 => Ok(nums[0]),
-        _ => Err(format!("invalid time string: {time_str}")),
-    }
-}
-
-/// Given a clip's full duration and optional trim start/end times, returns
-/// the duration ffmpeg will actually produce, for seeding `ProgressParser`.
-pub fn compute_trimmed_duration(
-    full_duration_secs: f64,
-    start_time: Option<&str>,
-    end_time: Option<&str>,
-) -> Result<f64, String> {
-    let start = match start_time {
-        Some(s) => parse_time_str(s)?,
-        None => 0.0,
-    };
-    let duration = match end_time {
-        Some(e) => parse_time_str(e)? - start,
-        None => full_duration_secs,
-    };
-    Ok(duration)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parses_hh_mm_ss() {
-        assert_eq!(parse_time_str("01:02:03").unwrap(), 3723.0);
-    }
-
-    #[test]
-    fn parses_mm_ss() {
-        assert_eq!(parse_time_str("02:03").unwrap(), 123.0);
-    }
-
-    #[test]
-    fn parses_bare_seconds() {
-        assert_eq!(parse_time_str("42").unwrap(), 42.0);
-    }
-
-    #[test]
-    fn rejects_garbage() {
-        assert!(parse_time_str("not-a-time").is_err());
-    }
-
-    #[test]
-    fn trimmed_duration_defaults_to_full_when_no_trim() {
-        assert_eq!(compute_trimmed_duration(120.0, None, None).unwrap(), 120.0);
-    }
-
-    #[test]
-    fn trimmed_duration_subtracts_start_from_end() {
-        // 00:00:10 -> 00:01:40 is 90 seconds
-        assert_eq!(
-            compute_trimmed_duration(200.0, Some("00:00:10"), Some("00:01:40")).unwrap(),
-            90.0
-        );
-    }
 
     #[test]
     fn feed_line_ignores_blank_lines() {

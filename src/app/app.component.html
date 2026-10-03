@@ -27,21 +27,18 @@
       <section class="clip-list-section">
         <app-clip-list
           [clips]="clips()"
-          [selectedPath]="previewPath()"
+          [selectedPath]="currentClipPath()"
           (clipSelected)="selectClip($event)"
         />
       </section>
-
-      <button type="button" class="primary-btn" [disabled]="!canConcat()" (click)="concat()">
-        Concat Clips
-      </button>
     </aside>
 
     <main class="preview-pane">
       <app-video-preview
-        [src]="previewUrl()"
-        [trimEnabled]="trimEnabled()"
+        [timeline]="timeline()"
+        [urlFor]="toPreviewUrl"
         (trimChange)="onTrimChange($event)"
+        (currentClipChange)="currentClipIndex.set($event)"
       />
     </main>
 
@@ -76,18 +73,14 @@
 
       <section class="field-group">
         <p class="hint">
-          @if (trimEnabled()) {
-            Drag the handles on the timeline to trim the concatenated video
-            before processing.
-          } @else {
-            Concat your clips, or select the concatenated output above, to
-            enable trimming.
-          }
+          The preview plays every clip back to back as one video. Drag the
+          handles on its timeline to trim; Export joins and trims the clips
+          in a single pass.
         </p>
       </section>
 
-      <button type="button" class="primary-btn" [disabled]="!canProcess()" (click)="process()">
-        Process Video
+      <button type="button" class="primary-btn" [disabled]="!canExport()" (click)="exportVideo()">
+        Export Video
       </button>
 
       <section class="progress-section">

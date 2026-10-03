@@ -29,7 +29,7 @@ yarn-error.log
 .history/*
 
 # Miscellaneous
-/.angular/cache
+/.angular/
 .sass-cache/
 /connect.lock
 /coverage
@@ -40,6 +40,10 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Claude Code local state
+/.claude/
 
 # Rust / Tauri
 /src-tauri/target/
@@ -61,3 +65,14 @@ legacy-python/venv/
 legacy-python/ffmpeg_logs/
 legacy-python/ffmpeg_binaries/*/*
 !legacy-python/ffmpeg_binaries/*/binaries
+
+# Python artifacts anywhere (e.g. from running the legacy app or its
+# PyInstaller build from the repo root), and the downloaded ffmpeg and
+# logs it leaves in its working directory.
+__pycache__/
+*.py[cod]
+/venv/
+/.venv/
+/build/
+/ffmpeg_binaries/
+/ffmpeg_logs/

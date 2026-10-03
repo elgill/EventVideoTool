@@ -4,12 +4,16 @@
 
 use std::path::Path;
 
-/// Options for the trim / mute / re-encode step (port of `process_thread.py`).
-pub struct ProcessOptions<'a> {
-    pub input_file: &'a str,
+/// Options for exporting the trimmed clip timeline in a single pass (the
+/// combined port of `concatenation_thread.py` and `process_thread.py`).
+pub struct ExportOptions<'a> {
+    /// Concat-demuxer filelist from [`crate::clips::write_filelist`]; the
+    /// trim end is already encoded in it as an `outpoint` directive.
+    pub filelist_path: &'a Path,
+    /// The first segment's inpoint, applied as an input `-ss` on the concat
+    /// demuxer (see [`crate::clips::write_filelist`] for why).
+    pub seek_secs: Option<f64>,
     pub output_file: &'a str,
-    pub start_time: Option<&'a str>,
-    pub end_time: Option<&'a str>,
     pub mute: bool,
     pub re_encode: bool,
     pub hw_acceleration: bool,
@@ -19,9 +23,10 @@ pub struct ProcessOptions<'a> {
     pub hw_encoder: Option<&'a str>,
 }
 
-/// Builds the ffmpeg args (excluding the binary path itself) for trimming,
-/// muting, and/or re-encoding a single video.
-pub fn build_process_args(opts: &ProcessOptions) -> Vec<String> {
+/// Builds the ffmpeg args (excluding the binary path itself) for
+/// concatenating, trimming, muting, and/or re-encoding the clips listed in
+/// a filelist into one output file.
+pub fn build_export_args(opts: &ExportOptions) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
 
     if opts.hw_acceleration {
@@ -29,15 +34,17 @@ pub fn build_process_args(opts: &ProcessOptions) -> Vec<String> {
         args.push("auto".into());
     }
 
-    args.push("-i".into());
-    args.push(opts.input_file.into());
-
-    if let (Some(start), Some(end)) = (opts.start_time, opts.end_time) {
+    if let Some(seek) = opts.seek_secs {
         args.push("-ss".into());
-        args.push(start.into());
-        args.push("-to".into());
-        args.push(end.into());
+        args.push(format!("{seek:.6}"));
     }
+
+    args.push("-f".into());
+    args.push("concat".into());
+    args.push("-safe".into());
+    args.push("0".into());
+    args.push("-i".into());
+    args.push(opts.filelist_path.to_string_lossy().into_owned());
 
     if opts.re_encode {
         match (opts.hw_encoder, opts.hw_acceleration) {
@@ -61,6 +68,9 @@ pub fn build_process_args(opts: &ProcessOptions) -> Vec<String> {
 
     if opts.mute {
         args.push("-an".into());
+    } else if !opts.re_encode {
+        args.push("-c:a".into());
+        args.push("copy".into());
     }
 
     args.push("-y".into());
@@ -69,35 +79,15 @@ pub fn build_process_args(opts: &ProcessOptions) -> Vec<String> {
     args
 }
 
-/// Builds the ffmpeg args for concatenating a filelist produced by
-/// [`crate::clips::write_concat_filelist`].
-pub fn build_concat_args(filelist_path: &Path, output_file: &str) -> Vec<String> {
-    vec![
-        "-f".into(),
-        "concat".into(),
-        "-safe".into(),
-        "0".into(),
-        "-hwaccel".into(),
-        "auto".into(),
-        "-i".into(),
-        filelist_path.to_string_lossy().into_owned(),
-        "-c".into(),
-        "copy".into(),
-        output_file.into(),
-        "-y".into(),
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn base_opts<'a>() -> ProcessOptions<'a> {
-        ProcessOptions {
-            input_file: "in.mp4",
+    fn base_opts<'a>() -> ExportOptions<'a> {
+        ExportOptions {
+            filelist_path: Path::new("list.txt"),
+            seek_secs: None,
             output_file: "out.mp4",
-            start_time: None,
-            end_time: None,
             mute: false,
             re_encode: false,
             hw_acceleration: false,
@@ -106,43 +96,38 @@ mod tests {
     }
 
     #[test]
-    fn copy_codec_when_not_re_encoding() {
-        let args = build_process_args(&base_opts());
-        assert_eq!(args, vec!["-i", "in.mp4", "-c:v", "copy", "-y", "out.mp4"]);
-    }
-
-    #[test]
-    fn adds_trim_window_when_both_times_set() {
-        let mut opts = base_opts();
-        opts.start_time = Some("00:00:05");
-        opts.end_time = Some("00:00:15");
-        let args = build_process_args(&opts);
+    fn stream_copies_everything_when_not_re_encoding() {
+        let args = build_export_args(&base_opts());
         assert_eq!(
             args,
             vec![
-                "-i", "in.mp4", "-ss", "00:00:05", "-to", "00:00:15", "-c:v", "copy", "-y",
-                "out.mp4"
+                "-f", "concat", "-safe", "0", "-i", "list.txt", "-c:v", "copy", "-c:a", "copy",
+                "-y", "out.mp4"
             ]
         );
     }
 
     #[test]
-    fn omits_trim_window_when_only_start_set() {
+    fn seek_is_an_input_option_on_the_concat_demuxer() {
         let mut opts = base_opts();
-        opts.start_time = Some("00:00:05");
-        let args = build_process_args(&opts);
-        assert!(!args.contains(&"-ss".to_string()));
+        opts.seek_secs = Some(4.5);
+        let args = build_export_args(&opts);
+        assert_eq!(
+            &args[..8],
+            ["-ss", "4.500000", "-f", "concat", "-safe", "0", "-i", "list.txt"]
+        );
     }
 
     #[test]
     fn re_encode_uses_libx264_without_hw_acceleration() {
         let mut opts = base_opts();
         opts.re_encode = true;
-        let args = build_process_args(&opts);
+        let args = build_export_args(&opts);
         assert_eq!(
             args,
             vec![
-                "-i", "in.mp4", "-c:v", "libx264", "-preset", "fast", "-b:v", "5M", "-y", "out.mp4"
+                "-f", "concat", "-safe", "0", "-i", "list.txt", "-c:v", "libx264", "-preset",
+                "fast", "-b:v", "5M", "-y", "out.mp4"
             ]
         );
     }
@@ -153,14 +138,18 @@ mod tests {
         opts.re_encode = true;
         opts.hw_acceleration = true;
         opts.hw_encoder = Some("h264_videotoolbox");
-        let args = build_process_args(&opts);
+        let args = build_export_args(&opts);
         assert_eq!(
             args,
             vec![
                 "-hwaccel",
                 "auto",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
                 "-i",
-                "in.mp4",
+                "list.txt",
                 "-c:v",
                 "h264_videotoolbox",
                 "-preset",
@@ -179,38 +168,17 @@ mod tests {
         opts.re_encode = true;
         opts.hw_acceleration = false;
         opts.hw_encoder = Some("h264_videotoolbox");
-        let args = build_process_args(&opts);
+        let args = build_export_args(&opts);
         assert!(args.contains(&"libx264".to_string()));
         assert!(!args.contains(&"h264_videotoolbox".to_string()));
     }
 
     #[test]
-    fn mute_adds_an_flag() {
+    fn mute_drops_audio_instead_of_copying_it() {
         let mut opts = base_opts();
         opts.mute = true;
-        let args = build_process_args(&opts);
+        let args = build_export_args(&opts);
         assert!(args.contains(&"-an".to_string()));
-    }
-
-    #[test]
-    fn concat_args_reference_filelist_and_output() {
-        let args = build_concat_args(Path::new("/tmp/filelist.txt"), "/tmp/out.mp4");
-        assert_eq!(
-            args,
-            vec![
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-hwaccel",
-                "auto",
-                "-i",
-                "/tmp/filelist.txt",
-                "-c",
-                "copy",
-                "/tmp/out.mp4",
-                "-y"
-            ]
-        );
+        assert!(!args.contains(&"-c:a".to_string()));
     }
 }

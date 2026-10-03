@@ -2,13 +2,33 @@ import { TestBed } from "@angular/core/testing";
 import { AppComponent } from "./app.component";
 import { VideoToolService } from "./services/video-tool.service";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
+import { ClipInfo } from "./models";
+
+const clips: ClipInfo[] = [
+  { name: "a.mp4", path: "/tmp/clips/a.mp4", duration_secs: 10 },
+  { name: "b.mp4", path: "/tmp/clips/b.mp4", duration_secs: 20 },
+];
 
 describe("AppComponent", () => {
+  // jsdom doesn't implement media playback and logs on every call.
+  beforeEach(() => {
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
   function create(videoToolOverrides: Partial<VideoToolService> = {}) {
     TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
-        { provide: VideoToolService, useValue: videoToolOverrides },
+        {
+          provide: VideoToolService,
+          useValue: {
+            toPreviewUrl: (p: string) => `asset://${p}`,
+            ...videoToolOverrides,
+          },
+        },
         {
           provide: FfmpegEventsService,
           useValue: {
@@ -24,76 +44,99 @@ describe("AppComponent", () => {
     return fixture.componentInstance;
   }
 
-  it("cannot process before any clips/output dir are chosen", () => {
+  it("cannot export before clips and an output dir are chosen", () => {
     const app = create();
-    expect(app.canProcess()).toBe(false);
-    expect(app.canConcat()).toBe(false);
-  });
+    expect(app.canExport()).toBe(false);
 
-  it("cannot process until concat has actually succeeded, even with an output dir chosen", () => {
-    const app = create();
+    app.clips.set(clips);
+    expect(app.canExport()).toBe(false);
+
     app.outputDir.set("/tmp/out");
-    expect(app.canProcess()).toBe(false);
+    expect(app.canExport()).toBe(true);
   });
 
-  it("can process once concat succeeds", async () => {
+  it("lays the clips out on one combined timeline", () => {
+    const app = create();
+    app.clips.set(clips);
+    expect(app.timeline().totalSecs).toBe(30);
+    expect(app.timeline().entries.map((e) => e.offsetSecs)).toEqual([0, 10]);
+  });
+
+  it("blocks preview and export when any clip's duration is unknown", async () => {
     const app = create({
-      concatClips: () => Promise.resolve(),
-      toPreviewUrl: (p: string) => `asset://${p}`,
+      listClips: () =>
+        Promise.resolve([...clips, { name: "bad.mp4", path: "/tmp/clips/bad.mp4", duration_secs: null }]),
     });
     app.clipDir.set("/tmp/clips");
     app.outputDir.set("/tmp/out");
 
-    await app.concat();
+    await app.refreshClips();
 
-    expect(app.canProcess()).toBe(true);
-    expect(app.hasConcatenatedOutput()).toBe(true);
-    expect(app.previewPath()).toBe("/tmp/out/concatenated_output.mp4");
+    expect(app.timeline().entries).toEqual([]);
+    expect(app.canExport()).toBe(false);
+    expect(app.statusMessage()).toContain("bad.mp4");
   });
 
-  it("resets hasConcatenatedOutput when a new output directory is chosen", async () => {
-    const app = create({
-      concatClips: () => Promise.resolve(),
-      pickDirectory: () => Promise.resolve("/tmp/other-out"),
-    });
-    app.clipDir.set("/tmp/clips");
-    app.outputDir.set("/tmp/out");
-    await app.concat();
-    expect(app.hasConcatenatedOutput()).toBe(true);
-
-    await app.browseOutputDir();
-
-    expect(app.outputDir()).toBe("/tmp/other-out");
-    expect(app.hasConcatenatedOutput()).toBe(false);
-    expect(app.canProcess()).toBe(false);
-  });
-
-  it("surfaces a failed concat as a status message instead of throwing", async () => {
-    const app = create({ concatClips: () => Promise.reject("ffmpeg exploded") });
-    app.clipDir.set("/tmp/clips");
-    app.outputDir.set("/tmp/out");
-
-    await app.concat();
-
-    expect(app.hasConcatenatedOutput()).toBe(false);
-    expect(app.statusMessage()).toContain("ffmpeg exploded");
-  });
-
-  it("only sends a trim range to process() once the user has actually dragged a handle", async () => {
+  it("exports the whole timeline until the user has actually dragged a trim handle", async () => {
     let capturedArgs: unknown;
     const app = create({
-      concatClips: () => Promise.resolve(),
-      processVideo: (args: unknown) => {
+      exportVideo: (args) => {
         capturedArgs = args;
         return Promise.resolve();
       },
     });
-    app.clipDir.set("/tmp/clips");
+    app.clips.set(clips);
     app.outputDir.set("/tmp/out");
-    await app.concat();
 
-    await app.process();
+    await app.exportVideo();
 
-    expect(capturedArgs).toMatchObject({ startTime: null, endTime: null });
+    expect(capturedArgs).toMatchObject({
+      clips,
+      outputFile: "/tmp/out/exported_output.mp4",
+      startSecs: null,
+      endSecs: null,
+    });
+  });
+
+  it("sends the trim range as combined-timeline seconds", async () => {
+    let capturedArgs: unknown;
+    const app = create({
+      exportVideo: (args) => {
+        capturedArgs = args;
+        return Promise.resolve();
+      },
+    });
+    app.clips.set(clips);
+    app.outputDir.set("/tmp/out");
+    TestBed.tick(); // let the clips-changed effect clear any old trim first
+
+    app.onTrimChange({ startSecs: 4, endSecs: 25 });
+    await app.exportVideo();
+
+    expect(capturedArgs).toMatchObject({ startSecs: 4, endSecs: 25 });
+  });
+
+  it("drops a trim selection when the clips change", () => {
+    const app = create();
+    app.clips.set(clips);
+    TestBed.tick();
+    app.onTrimChange({ startSecs: 4, endSecs: 25 });
+
+    app.clips.set(clips.slice(0, 1));
+    TestBed.tick();
+
+    expect(app.trimActive()).toBe(false);
+    expect(app.trimRange()).toBeNull();
+  });
+
+  it("surfaces a failed export as a status message instead of throwing", async () => {
+    const app = create({ exportVideo: () => Promise.reject("ffmpeg exploded") });
+    app.clips.set(clips);
+    app.outputDir.set("/tmp/out");
+
+    await app.exportVideo();
+
+    expect(app.statusMessage()).toContain("ffmpeg exploded");
+    expect(app.busy()).toBe(false);
   });
 });

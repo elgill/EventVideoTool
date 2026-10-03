@@ -1,14 +1,28 @@
 <div class="video-preview">
-  @if (src()) {
+  <!-- Always rendered (just hidden when empty) so both slots exist before
+       the first clip needs loading. -->
+  <div class="stage" [class.empty]="timeline().entries.length === 0">
     <video
-      #videoEl
-      [src]="src()"
-      (loadedmetadata)="onLoadedMetadata()"
-      (timeupdate)="onTimeUpdate()"
-      (play)="onPlay()"
-      (pause)="onPause()"
+      #videoA
+      preload="auto"
+      [class.inactive]="activeSlot() !== 0"
+      (timeupdate)="onTimeUpdate(0)"
+      (play)="onPlay(0)"
+      (pause)="onPause(0)"
+      (ended)="onEnded(0)"
     ></video>
+    <video
+      #videoB
+      preload="auto"
+      [class.inactive]="activeSlot() !== 1"
+      (timeupdate)="onTimeUpdate(1)"
+      (play)="onPlay(1)"
+      (pause)="onPause(1)"
+      (ended)="onEnded(1)"
+    ></video>
+  </div>
 
+  @if (timeline().entries.length > 0) {
     <div class="controls">
       <button type="button" (click)="togglePlay()">
         {{ isPlaying() ? "Pause" : "Play" }}
@@ -16,46 +30,51 @@
       <span class="time-readout">
         {{ formatHms(currentTime()) }} / {{ formatHms(duration()) }}
       </span>
+      @if (currentEntry(); as entry) {
+        <span class="clip-readout">
+          Clip {{ currentClipIndex() + 1 }}/{{ timeline().entries.length }}
+          &middot; {{ entry.clip.name }} &#64;
+          {{ formatHms(currentTime() - entry.offsetSecs) }}
+        </span>
+      }
     </div>
 
     <div class="track" #trackEl (click)="onTrackClick($event)">
       <div class="track-bg"></div>
 
-      @if (trimEnabled()) {
-        <div
-          class="trim-range"
-          [style.left.%]="startPct()"
-          [style.width.%]="endPct() - startPct()"
-        ></div>
+      @for (pct of boundaryPcts(); track $index) {
+        <div class="clip-boundary" [style.left.%]="pct"></div>
       }
+
+      <div
+        class="trim-range"
+        [style.left.%]="startPct()"
+        [style.width.%]="endPct() - startPct()"
+      ></div>
 
       <div class="playhead" [style.left.%]="playheadPct()"></div>
 
-      @if (trimEnabled()) {
-        <div
-          class="handle handle-start"
-          [style.left.%]="startPct()"
-          (pointerdown)="startDrag('start', $event)"
-          title="Trim start: {{ formatHms(trimStart()) }}"
-        ></div>
-        <div
-          class="handle handle-end"
-          [style.left.%]="endPct()"
-          (pointerdown)="startDrag('end', $event)"
-          title="Trim end: {{ formatHms(trimEnd()) }}"
-        ></div>
-      }
+      <div
+        class="handle handle-start"
+        [style.left.%]="startPct()"
+        (pointerdown)="startDrag('start', $event)"
+        title="Trim start: {{ formatHms(trimStart()) }}"
+      ></div>
+      <div
+        class="handle handle-end"
+        [style.left.%]="endPct()"
+        (pointerdown)="startDrag('end', $event)"
+        title="Trim end: {{ formatHms(trimEnd()) }}"
+      ></div>
     </div>
 
-    @if (trimEnabled()) {
-      <div class="trim-readout">
-        Trim: {{ formatHms(trimStart()) }} &ndash; {{ formatHms(trimEnd()) }}
-        ({{ formatHms(trimEnd() - trimStart()) }})
-      </div>
-    }
+    <div class="trim-readout">
+      Trim: {{ formatHms(trimStart()) }} &ndash; {{ formatHms(trimEnd()) }}
+      ({{ formatHms(trimEnd() - trimStart()) }})
+    </div>
   } @else {
     <div class="empty-preview">
-      Select a clip, or run Concat, to preview it here.
+      Choose a clip directory to preview its clips here as one video.
     </div>
   }
 </div>

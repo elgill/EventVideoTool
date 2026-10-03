@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from "@angular/core";
+import { Component, OnInit, computed, effect, inject, signal, viewChild } from "@angular/core";
 import { ClipListComponent } from "./components/clip-list/clip-list.component";
 import {
   TrimRange,
@@ -7,11 +7,14 @@ import {
 import { TimeUtilitiesDialogComponent } from "./components/time-utilities-dialog/time-utilities-dialog.component";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
 import { VideoToolService } from "./services/video-tool.service";
-import { ClipInfo, formatEta, formatHms } from "./models";
+import { ClipInfo, formatEta } from "./models";
+import { Timeline, buildTimeline } from "./timeline";
 
 function joinPath(dir: string, fileName: string): string {
   return /[/\\]$/.test(dir) ? `${dir}${fileName}` : `${dir}/${fileName}`;
 }
+
+const EMPTY_TIMELINE: Timeline = { entries: [], totalSecs: 0 };
 
 @Component({
   selector: "app-root",
@@ -23,22 +26,27 @@ function joinPath(dir: string, fileName: string): string {
 export class AppComponent implements OnInit {
   private readonly videoTool = inject(VideoToolService);
   protected readonly ffmpegEvents = inject(FfmpegEventsService);
+  private readonly preview = viewChild(VideoPreviewComponent);
 
   readonly clipDir = signal<string | null>(null);
   readonly outputDir = signal<string | null>(null);
   readonly clips = signal<ClipInfo[]>([]);
 
-  readonly previewPath = signal<string | null>(null);
-  /** Bumped whenever a file we might already be previewing gets overwritten,
-   * so the <video> element's src actually changes and reloads it instead of
-   * reusing a cached, now-stale asset. */
-  readonly previewVersion = signal(0);
-  readonly previewUrl = computed(() => {
-    const path = this.previewPath();
-    if (!path) return null;
-    const base = this.videoTool.toPreviewUrl(path);
-    return `${base}?v=${this.previewVersion()}`;
-  });
+  /** Clips ffprobe couldn't read a duration for. Any of these makes the
+   * combined timeline unknowable, so preview and export are blocked. */
+  readonly unreadableClips = computed(() =>
+    this.clips().filter((c) => c.duration_secs === null),
+  );
+  readonly timeline = computed(() =>
+    this.unreadableClips().length > 0 ? EMPTY_TIMELINE : buildTimeline(this.clips()),
+  );
+  readonly toPreviewUrl = (path: string) => this.videoTool.toPreviewUrl(path);
+
+  /** Clip under the preview's playhead, highlighted in the clip list. */
+  readonly currentClipIndex = signal(0);
+  readonly currentClipPath = computed(
+    () => this.timeline().entries[this.currentClipIndex()]?.clip.path ?? null,
+  );
 
   readonly mute = signal(false);
   readonly reEncode = signal(false);
@@ -48,43 +56,28 @@ export class AppComponent implements OnInit {
   readonly trimActive = signal(false);
   readonly trimRange = signal<TrimRange | null>(null);
 
-  /** True once `concat()` has produced concatenatedFilePath() at least once
-   * this session. Guards `process()`, matching the original app's
-   * `os.path.isfile(self.concatenated_file)` check. */
-  readonly hasConcatenatedOutput = signal(false);
-
   readonly statusMessage = signal("Choose a clip directory to get started.");
   readonly showTimeUtilities = signal(false);
   readonly busy = signal(false);
 
-  readonly formatHms = formatHms;
   readonly formatEta = formatEta;
 
-  readonly concatenatedFilePath = computed(() => {
+  readonly exportFilePath = computed(() => {
     const dir = this.outputDir();
-    return dir ? joinPath(dir, "concatenated_output.mp4") : null;
-  });
-  readonly processedFilePath = computed(() => {
-    const dir = this.outputDir();
-    return dir ? joinPath(dir, "process_output.mp4") : null;
+    return dir ? joinPath(dir, "exported_output.mp4") : null;
   });
 
-  readonly trimEnabled = computed(
-    () =>
-      this.previewPath() !== null && this.previewPath() === this.concatenatedFilePath(),
+  readonly canExport = computed(
+    () => this.timeline().entries.length > 0 && this.outputDir() !== null && !this.busy(),
   );
-
-  readonly canConcat = computed(
-    () => this.clipDir() !== null && this.outputDir() !== null && !this.busy(),
-  );
-  readonly canProcess = computed(() => this.hasConcatenatedOutput() && !this.busy());
 
   constructor() {
-    // Reset any pending trim selection whenever the previewed file changes.
+    // A trim selection only means something for the clips it was made on.
     effect(() => {
-      this.previewPath();
+      this.timeline();
       this.trimActive.set(false);
       this.trimRange.set(null);
+      this.currentClipIndex.set(0);
     });
   }
 
@@ -103,10 +96,6 @@ export class AppComponent implements OnInit {
     const dir = await this.videoTool.pickDirectory();
     if (!dir) return;
     this.outputDir.set(dir);
-    // A newly chosen output directory doesn't have a concatenated file in
-    // it yet (or if it happens to reuse a prior directory, we still want
-    // the user to explicitly re-run Concat before Process is enabled).
-    this.hasConcatenatedOutput.set(false);
   }
 
   async refreshClips(): Promise<void> {
@@ -116,11 +105,26 @@ export class AppComponent implements OnInit {
       this.clips.set(await this.videoTool.listClips(dir));
     } catch (err) {
       this.statusMessage.set(`Could not list clips: ${err}`);
+      return;
+    }
+
+    const unreadable = this.unreadableClips();
+    if (unreadable.length > 0) {
+      this.statusMessage.set(
+        `Could not read the duration of ${unreadable.map((c) => c.name).join(", ")}. ` +
+          "Remove or repair them to preview and export.",
+      );
+    } else if (this.clips().length === 0) {
+      this.statusMessage.set("No .mp4 clips found in that directory.");
+    } else {
+      this.statusMessage.set(`Loaded ${this.clips().length} clip(s).`);
     }
   }
 
+  /** Jumps the preview to the start of `clip` on the combined timeline. */
   selectClip(clip: ClipInfo): void {
-    this.previewPath.set(clip.path);
+    const entry = this.timeline().entries.find((e) => e.clip.path === clip.path);
+    if (entry) this.preview()?.seek(entry.offsetSecs);
   }
 
   onTrimChange(range: TrimRange): void {
@@ -134,52 +138,28 @@ export class AppComponent implements OnInit {
     }
   }
 
-  async concat(): Promise<void> {
-    const clipDir = this.clipDir();
-    const outputFile = this.concatenatedFilePath();
-    if (!clipDir || !outputFile) return;
-
-    this.busy.set(true);
-    this.ffmpegEvents.reset();
-    this.statusMessage.set("Starting concatenation...");
-    try {
-      await this.videoTool.concatClips(clipDir, outputFile);
-      this.statusMessage.set("Concatenation completed successfully!");
-      this.hasConcatenatedOutput.set(true);
-      this.previewVersion.update((v) => v + 1);
-      this.previewPath.set(outputFile);
-    } catch (err) {
-      this.statusMessage.set(`Concatenation failed: ${err}`);
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async process(): Promise<void> {
-    const inputFile = this.concatenatedFilePath();
-    const outputFile = this.processedFilePath();
-    if (!inputFile || !outputFile) return;
+  async exportVideo(): Promise<void> {
+    const outputFile = this.exportFilePath();
+    if (!outputFile || !this.canExport()) return;
 
     const range = this.trimActive() ? this.trimRange() : null;
 
     this.busy.set(true);
     this.ffmpegEvents.reset();
-    this.statusMessage.set("Starting processing...");
+    this.statusMessage.set("Starting export...");
     try {
-      await this.videoTool.processVideo({
-        inputFile,
+      await this.videoTool.exportVideo({
+        clips: this.clips(),
         outputFile,
-        startTime: range ? formatHms(range.startSecs) : null,
-        endTime: range ? formatHms(range.endSecs) : null,
+        startSecs: range?.startSecs ?? null,
+        endSecs: range?.endSecs ?? null,
         mute: this.mute(),
         reEncode: this.reEncode(),
         hwAcceleration: this.hwAcceleration(),
       });
-      this.statusMessage.set("Process completed successfully!");
-      this.previewVersion.update((v) => v + 1);
-      this.previewPath.set(outputFile);
+      this.statusMessage.set(`Export completed successfully: ${outputFile}`);
     } catch (err) {
-      this.statusMessage.set(`Process failed: ${err}`);
+      this.statusMessage.set(`Export failed: ${err}`);
     } finally {
       this.busy.set(false);
     }

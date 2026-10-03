@@ -5,7 +5,7 @@ export interface ClipInfo {
 }
 
 export interface ProgressEvent {
-  operation: "concat" | "process";
+  operation: "export";
   percentage: number;
   speed: number;
   eta_secs: number | null;
@@ -13,15 +13,9 @@ export interface ProgressEvent {
 }
 
 export interface FinishedEvent {
-  operation: "concat" | "process";
+  operation: "export";
   success: boolean;
   message: string;
-}
-
-export interface ProcessOptions {
-  mute: boolean;
-  reEncode: boolean;
-  hwAcceleration: boolean;
 }
 
 /** Formats a whole/fractional number of seconds as HH:MM:SS. */

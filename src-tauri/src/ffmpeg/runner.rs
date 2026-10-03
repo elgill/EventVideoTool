@@ -45,6 +45,9 @@ pub async fn run_ffmpeg<R: Runtime>(
         .shell()
         .sidecar("ffmpeg")
         .map_err(|e| format!("could not resolve bundled ffmpeg: {e}"))?
+        // Machine-readable progress on stdout for `ProgressParser`, and no
+        // interactive stats line cluttering stderr (kept for error messages).
+        .args(["-progress", "pipe:1", "-nostats"])
         .args(args)
         .spawn()
         .map_err(|e| format!("could not start ffmpeg: {e}"))?;
