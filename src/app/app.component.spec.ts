@@ -164,13 +164,41 @@ describe("AppComponent", () => {
     expect(app.trimRange()).toBeNull();
   });
 
+  it("shows a disk-full failure plainly, keeping ffmpeg's output as details", async () => {
+    const app = create({
+      exportVideo: () =>
+        Promise.reject({
+          kind: "diskFull",
+          message: "Ran out of disk space while exporting to D:\\Exports.",
+          details: "av_interleaved_write_frame(): No space left on device",
+        }),
+    });
+    app.clips.set(clips);
+
+    await app.exportVideo();
+
+    expect(app.exportResult()).toEqual({
+      ok: false,
+      error: {
+        kind: "diskFull",
+        message: "Ran out of disk space while exporting to D:\\Exports.",
+        details: "av_interleaved_write_frame(): No space left on device",
+      },
+    });
+    expect(app.busy()).toBe(false);
+    expect(app.canExport()).toBe(true);
+  });
+
   it("surfaces a failed export as a status message instead of throwing", async () => {
     const app = create({ exportVideo: () => Promise.reject("ffmpeg exploded") });
     app.clips.set(clips);
 
     await app.exportVideo();
 
-    expect(app.exportResult()).toEqual({ ok: false, error: "ffmpeg exploded" });
+    expect(app.exportResult()).toEqual({
+      ok: false,
+      error: { kind: "failed", message: "ffmpeg exploded", details: null },
+    });
     expect(app.busy()).toBe(false);
   });
 });

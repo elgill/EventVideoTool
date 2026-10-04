@@ -7,7 +7,7 @@ import {
 import { ClockSyncComponent } from "./components/clock-sync/clock-sync.component";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
 import { VideoToolService } from "./services/video-tool.service";
-import { ClipInfo } from "./models";
+import { ClipInfo, ExportError, toExportError } from "./models";
 import { exportStage } from "./export-status";
 import { Timeline, buildTimeline } from "./timeline";
 
@@ -88,7 +88,7 @@ export class AppComponent implements OnInit {
 
   /** How the last export ended; cleared when a new one starts. */
   readonly exportResult = signal<
-    { ok: true; path: string; fileName: string } | { ok: false; error: string } | null
+    { ok: true; path: string; fileName: string } | { ok: false; error: ExportError } | null
   >(null);
   /** What the running export is doing; null when none is running. */
   readonly exportStage = computed(() =>
@@ -193,7 +193,7 @@ export class AppComponent implements OnInit {
       });
       this.exportResult.set({ ok: true, path: outputFile, fileName: splitPath(outputFile).name });
     } catch (err) {
-      this.exportResult.set({ ok: false, error: String(err) });
+      this.exportResult.set({ ok: false, error: toExportError(err) });
     } finally {
       this.busy.set(false);
     }

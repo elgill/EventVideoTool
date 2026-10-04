@@ -196,6 +196,11 @@
   color: var(--danger);
 }
 
+.status-message {
+  margin: 0;
+  font-size: 0.8em;
+}
+
 .export-status details {
   font-size: 0.78em;
 }

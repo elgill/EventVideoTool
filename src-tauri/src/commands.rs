@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
 
-use crate::clips::{self, ClipInfo};
+use crate::clips::{self, ClipInfo, Segment};
+use crate::export::{self, ExportError, SegmentSource};
 use crate::ffmpeg::args::{build_export_args, ExportOptions};
 use crate::ffmpeg::runner::run_ffmpeg;
 use crate::hwaccel::detect_hardware_encoder;
@@ -79,6 +80,11 @@ pub async fn list_clips(app: AppHandle, dir: String) -> Result<Vec<ClipInfo>, St
 /// in one ffmpeg pass, emitting `ffmpeg-progress`/`ffmpeg-finished` events
 /// as it runs.
 ///
+/// Fails fast if the destination clearly lacks the space, and writes to a
+/// `.partial` file that only replaces `output_file` on success, so running
+/// out of space (or any other failure) never leaves a truncated video
+/// behind or destroys a file the user chose to overwrite.
+///
 /// `clips` is the list the frontend's timeline was built from (as returned
 /// by `list_clips`), so `start_secs`/`end_secs` — positions on that combined
 /// timeline — map onto exactly the clips and durations the user saw. Omit
@@ -94,11 +100,30 @@ pub async fn export_video(
     mute: bool,
     re_encode: bool,
     hw_acceleration: bool,
-) -> Result<(), String> {
-    let segments = clips::plan_segments(&clips, start_secs, end_secs)?;
+) -> Result<(), ExportError> {
+    let segments =
+        clips::plan_segments(&clips, start_secs, end_secs).map_err(ExportError::failed)?;
+
+    let output_path = PathBuf::from(&output_file);
+    let output_dir = output_path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."))
+        .to_path_buf();
+    // If free space can't be read, let the export try rather than block it.
+    if let Ok(available) = fs4::available_space(&output_dir) {
+        let estimate =
+            export::estimate_output_bytes(&segment_sources(&clips, &segments), re_encode);
+        export::check_free_space(estimate, available, &output_dir)?;
+    }
 
     let filelist_path = clips::temp_filelist_path();
-    clips::write_filelist(&filelist_path, &segments)?;
+    clips::write_filelist(&filelist_path, &segments).map_err(|e| {
+        let _ = std::fs::remove_file(&filelist_path);
+        export::describe_temp_file_failure(e, &std::env::temp_dir())
+    })?;
+    let partial_path = export::partial_path(&output_path);
+    let partial_file = partial_path.to_string_lossy().into_owned();
 
     let hw_encoder = if hw_acceleration {
         detect_hardware_encoder()
@@ -109,7 +134,7 @@ pub async fn export_video(
     let opts = ExportOptions {
         filelist_path: &filelist_path,
         seek_secs: segments[0].inpoint,
-        output_file: &output_file,
+        output_file: &partial_file,
         mute,
         re_encode,
         hw_acceleration,
@@ -124,5 +149,30 @@ pub async fn export_video(
     )
     .await;
     let _ = std::fs::remove_file(&filelist_path);
-    result
+
+    export::finalize_output(&partial_path, &output_path, result.is_ok())?;
+    result.map_err(|raw| export::describe_ffmpeg_failure(&raw, &output_dir))
+}
+
+/// Pairs each planned segment with its source file's size and full length,
+/// for estimating the export's size. Unreadable sizes count as zero, which
+/// only makes the estimate more lenient.
+fn segment_sources(clips: &[ClipInfo], segments: &[Segment]) -> Vec<SegmentSource> {
+    segments
+        .iter()
+        .map(|segment| {
+            let clip_secs = clips
+                .iter()
+                .find(|c| c.path == segment.path)
+                .and_then(|c| c.duration_secs)
+                .unwrap_or(segment.duration_secs);
+            SegmentSource {
+                file_bytes: std::fs::metadata(&segment.path)
+                    .map(|m| m.len())
+                    .unwrap_or(0),
+                clip_secs,
+                segment_secs: segment.duration_secs,
+            }
+        })
+        .collect()
 }

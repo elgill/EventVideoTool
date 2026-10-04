@@ -1,4 +1,4 @@
-import { formatEta, formatHms, parseHms } from "./models";
+import { formatEta, formatHms, parseHms, toExportError } from "./models";
 
 describe("formatHms", () => {
   it("formats zero", () => {
@@ -63,5 +63,23 @@ describe("formatEta", () => {
 
   it("formats hours, minutes, and seconds", () => {
     expect(formatEta(3661)).toBe("1h 1m 1.0s");
+  });
+});
+
+describe("toExportError", () => {
+  it("passes through the backend's structured error", () => {
+    expect(toExportError({ kind: "diskFull", message: "Full.", details: "ENOSPC" })).toEqual({
+      kind: "diskFull",
+      message: "Full.",
+      details: "ENOSPC",
+    });
+  });
+
+  it("wraps a plain string rejection", () => {
+    expect(toExportError("command export_video not found")).toEqual({
+      kind: "failed",
+      message: "command export_video not found",
+      details: null,
+    });
   });
 });

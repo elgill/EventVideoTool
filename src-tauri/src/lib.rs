@@ -1,5 +1,6 @@
 pub mod clips;
 mod commands;
+pub mod export;
 pub mod ffmpeg;
 pub mod hwaccel;
 

@@ -18,6 +18,27 @@ export interface FinishedEvent {
   message: string;
 }
 
+/** How `export_video` reports failure (src-tauri/src/export.rs). */
+export interface ExportError {
+  kind: "diskFull" | "failed";
+  message: string;
+  details: string | null;
+}
+
+/** Normalizes whatever a failed export rejected with, including plain
+ * strings from Tauri itself (e.g. a command that couldn't be invoked). */
+export function toExportError(err: unknown): ExportError {
+  if (err && typeof err === "object" && "message" in err && "kind" in err) {
+    const e = err as Partial<ExportError>;
+    return {
+      kind: e.kind === "diskFull" ? "diskFull" : "failed",
+      message: String(e.message),
+      details: e.details ?? null,
+    };
+  }
+  return { kind: "failed", message: String(err), details: null };
+}
+
 /** Formats a whole/fractional number of seconds as HH:MM:SS. */
 export function formatHms(totalSeconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));

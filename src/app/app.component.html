@@ -91,11 +91,16 @@
             </div>
           } @else {
             <div class="export-status failed" role="alert">
-              <div class="status-title">Export failed</div>
-              <details>
-                <summary>Details</summary>
-                <pre>{{ result.error }}</pre>
-              </details>
+              <div class="status-title">
+                {{ result.error.kind === "diskFull" ? "Not enough disk space" : "Export failed" }}
+              </div>
+              <p class="status-message">{{ result.error.message }}</p>
+              @if (result.error.details) {
+                <details>
+                  <summary>Details</summary>
+                  <pre>{{ result.error.details }}</pre>
+                </details>
+              }
             </div>
           }
         }
