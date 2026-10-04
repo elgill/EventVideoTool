@@ -1,6 +1,6 @@
 # Builds signed Windows installers and attaches them to a GitHub release.
 # Trigger: run `npm run release` locally, which bumps the version, commits, and pushes a v* tag.
-# Signing uses Azure Trusted Signing via src-tauri/tauri.signing.conf.json; local builds stay unsigned.
+# Signing uses Azure Artifact (formerly Trusted) Signing via src-tauri/tauri.signing.conf.json; local builds stay unsigned.
 name: Release
 
 on:
@@ -37,8 +37,8 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Install trusted-signing-cli
-        run: cargo install trusted-signing-cli --locked
+      - name: Install artifact-signing-cli
+        run: cargo install artifact-signing-cli --locked
 
       - name: Install dependencies
         run: npm ci

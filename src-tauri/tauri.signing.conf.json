@@ -2,7 +2,16 @@
   "$schema": "https://schema.tauri.app/config/2",
   "bundle": {
     "windows": {
-      "signCommand": "trusted-signing-cli -e https://eus.codesigning.azure.net -a CGTrustedSigning -c CGTrustedSignCert -d \"Event Video Tool\" %1"
+      "signCommand": {
+        "cmd": "artifact-signing-cli",
+        "args": [
+          "-e", "https://eus.codesigning.azure.net",
+          "-a", "CGTrustedSigning",
+          "-c", "CGTrustedSignCert",
+          "-d", "Event Video Tool",
+          "%1"
+        ]
+      }
     }
   }
 }
