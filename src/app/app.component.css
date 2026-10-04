@@ -21,32 +21,55 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 260px 1fr 280px;
+  grid-template-columns: 300px 1fr;
   gap: 1em;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .app-body {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     overflow-y: auto;
   }
 }
 
-.sidebar,
-.options-pane {
+.sidebar {
   display: flex;
   flex-direction: column;
-  gap: 0.9em;
+  gap: 0.8em;
   min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7em;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 0.78em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.clips-panel {
+  flex: 1;
+  min-height: 12em;
 }
 
 .clip-list-section {
   flex: 1;
   min-height: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.5em;
+}
+
+.export-panel {
+  flex: none;
 }
 
 .preview-pane {
@@ -63,17 +86,6 @@
   min-height: 0;
 }
 
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35em;
-}
-
-.field-label {
-  font-size: 0.78em;
-  opacity: 0.75;
-}
-
 .field-row {
   display: flex;
   gap: 0.4em;
@@ -84,6 +96,12 @@
   min-width: 0;
 }
 
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -92,20 +110,47 @@
   cursor: pointer;
 }
 
+.checkbox-row.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.nested {
+  margin-left: 1.6em;
+}
+
 .hint {
   font-size: 0.78em;
   opacity: 0.7;
-  margin: 0.2em 0 0;
+  margin: 0;
 }
 
-.progress-section {
-  margin-top: auto;
+.export-status {
   display: flex;
   flex-direction: column;
-  gap: 0.4em;
+  gap: 0.35em;
+}
+
+.status-title {
+  font-size: 0.88em;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  overflow-wrap: anywhere;
+}
+
+.pct {
+  font-variant-numeric: tabular-nums;
+}
+
+.status-detail {
+  font-size: 0.78em;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-bar {
+  position: relative;
   height: 8px;
   border-radius: 4px;
   background: var(--surface-hover);
@@ -118,20 +163,56 @@
   transition: width 0.15s ease-out;
 }
 
-.progress-text {
+/* No percentage to show (yet, or any more): a sliding bar says "still busy". */
+.progress-bar.indeterminate .progress-fill {
+  position: absolute;
+  width: 35%;
+  transition: none;
+  animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    left: -35%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar.indeterminate .progress-fill {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
+.export-status.done .status-title {
+  color: var(--accent);
+}
+
+.export-status.failed .status-title {
+  color: var(--danger);
+}
+
+.export-status details {
   font-size: 0.78em;
-  opacity: 0.75;
-  margin: 0;
+}
+
+.export-status pre {
+  max-height: 10em;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0.3em 0 0;
+  padding: 0.4em;
+  background: var(--surface-hover);
+  border-radius: 4px;
 }
 
 .reveal-btn {
   align-self: flex-start;
   padding: 0.3em 0.8em;
   font-size: 0.82em;
-}
-
-.status-message {
-  font-size: 0.82em;
-  margin: 0;
-  min-height: 1.2em;
 }

@@ -5,20 +5,100 @@
 
   <div class="app-body">
     <aside class="sidebar">
-      <section class="field-group">
-        <label class="field-label">Clip Directory</label>
+      <section class="panel clips-panel">
+        <h2 class="panel-title">Clips</h2>
         <div class="field-row">
-          <input type="text" readonly [value]="clipDir() ?? ''" placeholder="Not selected" />
+          <input type="text" readonly [value]="clipDir() ?? ''" placeholder="No folder chosen" />
           <button type="button" (click)="browseClipDir()">Browse</button>
+        </div>
+        <p class="hint">{{ statusMessage() }}</p>
+        <div class="clip-list-section">
+          <app-clip-list
+            [clips]="clips()"
+            [selectedPath]="currentClipPath()"
+            (clipSelected)="selectClip($event)"
+          />
         </div>
       </section>
 
-      <section class="clip-list-section">
-        <app-clip-list
-          [clips]="clips()"
-          [selectedPath]="currentClipPath()"
-          (clipSelected)="selectClip($event)"
-        />
+      <section class="panel export-panel">
+        <h2 class="panel-title">Export</h2>
+        <div class="options">
+          <label class="checkbox-row">
+            <input type="checkbox" [checked]="mute()" (change)="mute.set(!mute())" />
+            Mute audio
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" [checked]="reEncode()" (change)="reEncode.set(!reEncode())" />
+            Re-encode
+          </label>
+          <label class="checkbox-row nested" [class.disabled]="!reEncode()">
+            <input
+              type="checkbox"
+              [checked]="hwAcceleration()"
+              [disabled]="!reEncode()"
+              (change)="hwAcceleration.set(!hwAcceleration()); onHwAccelerationToggle()"
+            />
+            Use hardware encoder
+          </label>
+          @if (reEncode() && hwAcceleration() && hwEncoderName() !== undefined) {
+            <p class="hint nested">
+              @if (hwEncoderName()) {
+                Found <code>{{ hwEncoderName() }}</code>
+              } @else {
+                None found &mdash; will use libx264.
+              }
+            </p>
+          }
+        </div>
+
+        <button type="button" class="primary-btn" [disabled]="!canExport()" (click)="exportVideo()">
+          @if (busy()) {
+            Exporting&hellip;
+          } @else {
+            Export Video&hellip;
+          }
+        </button>
+
+        @if (exportStage(); as stage) {
+          <div class="export-status" role="status" aria-live="polite">
+            @if (stage.kind === "working") {
+              <div class="status-title">
+                <span>{{ exportMethod().verb }}&hellip;</span>
+                <span class="pct">{{ stage.percentage.toFixed(0) }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="stage.percentage"></div>
+              </div>
+              <div class="status-detail">{{ stage.detail || exportMethod().detail }}</div>
+            } @else if (stage.kind === "preparing") {
+              <div class="status-title">Preparing&hellip;</div>
+              <div class="progress-bar indeterminate"><div class="progress-fill"></div></div>
+              <div class="status-detail">Starting ffmpeg and finding the trim start</div>
+            } @else {
+              <div class="status-title">Finishing up&hellip;</div>
+              <div class="progress-bar indeterminate"><div class="progress-fill"></div></div>
+              <div class="status-detail">Writing the file</div>
+            }
+          </div>
+        } @else if (exportResult(); as result) {
+          @if (result.ok) {
+            <div class="export-status done" role="status">
+              <div class="status-title">&#10003; Exported {{ result.fileName }}</div>
+              <button type="button" class="ghost-btn reveal-btn" (click)="revealLastExport()">
+                Show in folder
+              </button>
+            </div>
+          } @else {
+            <div class="export-status failed" role="alert">
+              <div class="status-title">Export failed</div>
+              <details>
+                <summary>Details</summary>
+                <pre>{{ result.error }}</pre>
+              </details>
+            </div>
+          }
+        }
       </section>
     </aside>
 
@@ -40,65 +120,5 @@
         />
       }
     </main>
-
-    <aside class="options-pane">
-      <section class="field-group">
-        <label class="checkbox-row">
-          <input type="checkbox" [checked]="mute()" (change)="mute.set(!mute())" />
-          Mute
-        </label>
-        <label class="checkbox-row">
-          <input type="checkbox" [checked]="reEncode()" (change)="reEncode.set(!reEncode())" />
-          Re-encode
-        </label>
-        <label class="checkbox-row">
-          <input
-            type="checkbox"
-            [checked]="hwAcceleration()"
-            (change)="hwAcceleration.set(!hwAcceleration()); onHwAccelerationToggle()"
-          />
-          HW Acceleration
-        </label>
-        @if (hwAcceleration() && hwEncoderName() !== undefined) {
-          <p class="hint">
-            @if (hwEncoderName()) {
-              Will use hardware encoder: <code>{{ hwEncoderName() }}</code>
-            } @else {
-              No hardware encoder detected &mdash; falling back to libx264.
-            }
-          </p>
-        }
-      </section>
-
-      <section class="field-group">
-        <p class="hint">
-          The preview plays every clip back to back as one video. Drag the
-          handles, type times, or press I/O at the playhead to trim; Export
-          joins and trims the clips in a single pass.
-        </p>
-      </section>
-
-      <button type="button" class="primary-btn" [disabled]="!canExport()" (click)="exportVideo()">
-        Export Video&hellip;
-      </button>
-
-      <section class="progress-section">
-        @if (ffmpegEvents.running() && ffmpegEvents.progress(); as progress) {
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="progress.percentage"></div>
-          </div>
-          <p class="progress-text">
-            {{ progress.percentage.toFixed(1) }}% &middot; {{ progress.speed }}x speed &middot;
-            ETA {{ formatEta(progress.eta_secs) }}
-          </p>
-        }
-        <p class="status-message">{{ statusMessage() }}</p>
-        @if (lastExportPath() && !busy()) {
-          <button type="button" class="ghost-btn reveal-btn" (click)="revealLastExport()">
-            Show in folder
-          </button>
-        }
-      </section>
-    </aside>
   </div>
 </div>

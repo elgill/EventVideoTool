@@ -111,19 +111,4 @@ describe("ClockSyncComponent", () => {
     expect(sync.editingSync()).toBe(true);
     expect(sync.syncDraft()).toBe(t("00:26:34"));
   });
-
-  it("explains the buffer with the runner last searched for", () => {
-    const { fixture, sync } = create();
-    fixture.componentRef.setInput("trimStartSecs", t("00:10:03"));
-    fixture.componentRef.setInput("trimEndSecs", t("01:00:00"));
-    sync.syncDraft.set(t("00:25:34"));
-    sync.syncToPlayhead();
-    sync.bufferSecs.set(5);
-
-    // Crosses 2:00 into the export, so plays from 1:55.
-    expect(sync.examplePlayAt()).toBe(t("00:01:55"));
-
-    sync.setFindClock(t("00:10:00")); // before the export starts
-    expect(sync.examplePlayAt()).toBeNull();
-  });
 });

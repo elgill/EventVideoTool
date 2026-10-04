@@ -104,33 +104,21 @@
                 <button type="button" class="small link" (click)="copy(o.offsetSecs)">Copy</button>
                 <span class="muted breakdown">
                   = {{ o.firstFrameRaceSecs.toLocaleString() }} s (race time at the first frame)
-                  + {{ bufferSecs() }} s buffer
+                  +
+                  <input
+                    class="buffer-input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    aria-label="Buffer: seconds each runner starts playing before they cross the line"
+                    title="Seconds each runner starts playing before they cross the line"
+                    [value]="bufferSecs()"
+                    (input)="setBuffer($any($event.target).value)"
+                  />
+                  s buffer
                 </span>
               </dd>
-
-              <dt><label for="buffer">Buffer</label></dt>
-              <dd>
-                Start each runner
-                <input
-                  id="buffer"
-                  class="buffer-input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  [value]="bufferSecs()"
-                  (input)="setBuffer($any($event.target).value)"
-                />
-                s before they cross the line
-                <span class="muted">(already included in the offset)</span>
-              </dd>
             </dl>
-            @if (examplePlayAt() !== null) {
-              <p class="example">
-                Check: a runner who finished at {{ formatSignedHms(findClock()) }} should start
-                playing at {{ formatSignedHms(examplePlayAt()!) }} into the uploaded video,
-                {{ bufferSecs() }} s before they reach the line.
-              </p>
-            }
           } @else {
             <p class="muted wrap">
               Once synced, this shows the length and race offset (in seconds) to enter

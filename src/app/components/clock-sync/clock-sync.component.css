@@ -175,7 +175,7 @@ kbd {
 }
 
 .buffer-input {
-  width: 4.5em;
+  width: 3.5em;
   font: inherit;
   padding: 0.2em 0.4em;
   border-radius: 6px;
@@ -184,10 +184,3 @@ kbd {
   color: inherit;
 }
 
-.example {
-  margin: 0.2em 0 0;
-  padding: 0.45em 0.6em;
-  border-left: 3px solid var(--accent);
-  background: var(--surface-hover);
-  border-radius: 0 6px 6px 0;
-}

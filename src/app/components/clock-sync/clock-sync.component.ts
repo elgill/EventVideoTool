@@ -114,15 +114,6 @@ export class ClockSyncComponent {
       ? onlineSyncValues(sync, this.trimStartSecs(), this.trimEndSecs(), this.bufferSecs())
       : null;
   });
-  /** Where the site will start the runner last searched for, in the uploaded
-   * video; null if they aren't in it. */
-  readonly examplePlayAt = computed(() => {
-    const online = this.online();
-    if (!online) return null;
-    const crossesAt = this.findClock() - online.firstFrameRaceSecs;
-    if (crossesAt < 0 || crossesAt > online.lengthSecs) return null;
-    return this.findClock() - online.offsetSecs;
-  });
 
   constructor() {
     effect(() => {

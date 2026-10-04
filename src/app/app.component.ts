@@ -7,7 +7,8 @@ import {
 import { ClockSyncComponent } from "./components/clock-sync/clock-sync.component";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
 import { VideoToolService } from "./services/video-tool.service";
-import { ClipInfo, formatEta } from "./models";
+import { ClipInfo } from "./models";
+import { exportStage } from "./export-status";
 import { Timeline, buildTimeline } from "./timeline";
 
 const LAST_EXPORT_DIR_KEY = "lastExportDir";
@@ -84,10 +85,24 @@ export class AppComponent implements OnInit {
   readonly statusMessage = signal("Choose a clip directory to get started.");
   readonly busy = signal(false);
 
-  readonly formatEta = formatEta;
 
-  /** The file the last successful export wrote, for "Show in folder". */
-  readonly lastExportPath = signal<string | null>(null);
+  /** How the last export ended; cleared when a new one starts. */
+  readonly exportResult = signal<
+    { ok: true; path: string; fileName: string } | { ok: false; error: string } | null
+  >(null);
+  /** What the running export is doing; null when none is running. */
+  readonly exportStage = computed(() =>
+    this.busy() ? exportStage(this.ffmpegEvents.progress()) : null,
+  );
+  /** How the video will be produced, so the stage reads e.g. "Re-encoding…". */
+  readonly exportMethod = computed(() => {
+    if (!this.reEncode()) return { verb: "Joining clips", detail: "Copying without re-encoding" };
+    const encoder = this.hwAcceleration() ? this.hwEncoderName() : null;
+    return {
+      verb: "Re-encoding",
+      detail: encoder ? `Using hardware encoder ${encoder}` : "Using libx264",
+    };
+  });
 
   readonly canExport = computed(() => this.timeline().entries.length > 0 && !this.busy());
 
@@ -165,7 +180,7 @@ export class AppComponent implements OnInit {
 
     this.busy.set(true);
     this.ffmpegEvents.reset();
-    this.statusMessage.set("Starting export...");
+    this.exportResult.set(null);
     try {
       await this.videoTool.exportVideo({
         clips: this.clips(),
@@ -176,18 +191,17 @@ export class AppComponent implements OnInit {
         reEncode: this.reEncode(),
         hwAcceleration: this.hwAcceleration(),
       });
-      this.statusMessage.set(`Export completed successfully: ${outputFile}`);
-      this.lastExportPath.set(outputFile);
+      this.exportResult.set({ ok: true, path: outputFile, fileName: splitPath(outputFile).name });
     } catch (err) {
-      this.statusMessage.set(`Export failed: ${err}`);
+      this.exportResult.set({ ok: false, error: String(err) });
     } finally {
       this.busy.set(false);
     }
   }
 
   async revealLastExport(): Promise<void> {
-    const path = this.lastExportPath();
-    if (path) await this.videoTool.revealInFolder(path).catch(() => {});
+    const result = this.exportResult();
+    if (result?.ok) await this.videoTool.revealInFolder(result.path).catch(() => {});
   }
 }
 

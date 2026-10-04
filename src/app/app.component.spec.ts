@@ -74,7 +74,11 @@ describe("AppComponent", () => {
     await app.exportVideo();
 
     expect(capturedArgs.outputFile).toBe("/tmp/out/finish line.mp4");
-    expect(app.lastExportPath()).toBe("/tmp/out/finish line.mp4");
+    expect(app.exportResult()).toEqual({
+      ok: true,
+      path: "/tmp/out/finish line.mp4",
+      fileName: "finish line.mp4",
+    });
     expect(suggested).toEqual(["/tmp/clips.mp4", "/tmp/out/clips.mp4"]);
   });
 
@@ -166,7 +170,7 @@ describe("AppComponent", () => {
 
     await app.exportVideo();
 
-    expect(app.statusMessage()).toContain("ffmpeg exploded");
+    expect(app.exportResult()).toEqual({ ok: false, error: "ffmpeg exploded" });
     expect(app.busy()).toBe(false);
   });
 });
