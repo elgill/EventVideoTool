@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { AppComponent, splitPath, suggestExportPath } from "./app.component";
 import { VideoToolService } from "./services/video-tool.service";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
+import { UpdateService } from "./services/update.service";
 import { ClipInfo } from "./models";
 
 const clips: ClipInfo[] = [
@@ -38,6 +39,10 @@ describe("AppComponent", () => {
             running: () => false,
             progress: () => null,
           },
+        },
+        {
+          provide: UpdateService,
+          useValue: { state: () => ({ kind: "idle" }), checkForUpdate: () => Promise.resolve() },
         },
       ],
     });

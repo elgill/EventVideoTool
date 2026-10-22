@@ -7,6 +7,7 @@ import {
 import { ClockSyncComponent } from "./components/clock-sync/clock-sync.component";
 import { FfmpegEventsService } from "./services/ffmpeg-events.service";
 import { VideoToolService } from "./services/video-tool.service";
+import { UpdateService } from "./services/update.service";
 import { ClipInfo, ExportError, toExportError } from "./models";
 import { exportStage } from "./export-status";
 import { Timeline, buildTimeline } from "./timeline";
@@ -53,6 +54,7 @@ const EMPTY_TIMELINE: Timeline = { entries: [], totalSecs: 0 };
 export class AppComponent implements OnInit {
   private readonly videoTool = inject(VideoToolService);
   protected readonly ffmpegEvents = inject(FfmpegEventsService);
+  protected readonly updates = inject(UpdateService);
   private readonly preview = viewChild(VideoPreviewComponent);
 
   readonly clipDir = signal<string | null>(null);
@@ -117,6 +119,7 @@ export class AppComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    void this.updates.checkForUpdate();
     await this.ffmpegEvents.ensureListening();
   }
 

@@ -17,6 +17,21 @@
   margin: 0;
 }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.85em;
+  padding: 0.3em 0.4em 0.3em 0.8em;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+}
+
+.update-banner.failed {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .app-body {
   flex: 1;
   min-height: 0;

@@ -1,6 +1,28 @@
 <div class="app-shell">
   <header class="app-header">
     <h1>Event Video Tool</h1>
+    @let update = updates.state();
+    @if (update.kind !== "idle") {
+      <div class="update-banner" [class.failed]="update.kind === 'failed'" role="status">
+        @if (update.kind === "available") {
+          <span>Version {{ update.version }} is available.</span>
+          <button type="button" class="primary-btn" [disabled]="busy()" (click)="updates.install()">
+            Install &amp; restart
+          </button>
+          <button type="button" class="ghost-btn" (click)="updates.dismiss()">Later</button>
+        } @else if (update.kind === "installing") {
+          <span>
+            Downloading {{ update.version }}&hellip;
+            @if (update.percentage !== null) {
+              {{ update.percentage.toFixed(0) }}%
+            }
+          </span>
+        } @else {
+          <span [title]="update.message">Update to {{ update.version }} failed.</span>
+          <button type="button" class="ghost-btn" (click)="updates.dismiss()">Dismiss</button>
+        }
+      </div>
+    }
   </header>
 
   <div class="app-body">

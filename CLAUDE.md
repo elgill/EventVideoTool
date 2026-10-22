@@ -29,6 +29,10 @@ The Rust integration test (`src-tauri/tests/ffmpeg_integration.rs`) runs the rea
 
 ffmpeg/ffprobe come from the `@ffmpeg-installer/ffmpeg` and `@ffprobe-installer/ffprobe` npm packages. `scripts/prepare-ffmpeg.mjs` copies them to `src-tauri/binaries/{ffmpeg,ffprobe}-<rustc host triple>[.exe]` (the naming Tauri's `externalBin` sidecar config requires). It runs on `npm install` and before every `tauri dev`/`tauri build` (see `beforeDevCommand`/`beforeBuildCommand` in `src-tauri/tauri.conf.json`). Never hand-place binaries. The production code invokes them via `app.shell().sidecar("ffmpeg"|"ffprobe")`.
 
+## Releases and auto-update
+
+`npm run release` bumps the version and pushes a `v*` tag; `.github/workflows/release.yml` then builds with `src-tauri/tauri.signing.conf.json` (Azure code signing + `createUpdaterArtifacts`, CI-only so local builds don't need keys) and publishes the installers plus a generated `latest.json` to the GitHub release. The app (`services/update.service.ts`) checks `releases/latest/download/latest.json` on launch via `tauri-plugin-updater`; the minisign public key is in `tauri.conf.json`, the private key is the `TAURI_SIGNING_PRIVATE_KEY` repo secret. Losing that private key means existing installs can't verify future updates.
+
 ## Architecture
 
 **Frontend ↔ backend contract.** Three Tauri commands in `src-tauri/src/commands.rs` (registered in `lib.rs`): `list_clips`, `detect_hw_encoder`, `export_video`. The frontend calls them only through `src/app/services/video-tool.service.ts`. Progress comes back as Tauri events `ffmpeg-progress` / `ffmpeg-finished` (emitted by `src-tauri/src/ffmpeg/runner.rs`, consumed by `ffmpeg-events.service.ts` as signals, wrapped in `NgZone.run`). Payload shapes are mirrored by hand between Rust structs (`clips::ClipInfo`, `runner::ProgressEvent`/`FinishedEvent`) and `src/app/models.ts` — keep them in sync; Rust fields are snake_case on the wire (e.g. `duration_secs`), while command *arguments* are camelCase from JS (`outputFile`, `startSecs`).
