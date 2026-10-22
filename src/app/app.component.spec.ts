@@ -42,7 +42,11 @@ describe("AppComponent", () => {
         },
         {
           provide: UpdateService,
-          useValue: { state: () => ({ kind: "idle" }), checkForUpdate: () => Promise.resolve() },
+          useValue: {
+            state: () => ({ kind: "idle" }),
+            currentVersion: () => "1.2.3",
+            checkForUpdate: () => Promise.resolve(),
+          },
         },
       ],
     });

@@ -17,6 +17,29 @@
   margin: 0;
 }
 
+.app-version {
+  font-size: 0.7em;
+  font-weight: normal;
+  opacity: 0.6;
+  margin-left: 0.4em;
+}
+
+.update-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.8em;
+}
+
+.update-status > span {
+  opacity: 0.7;
+}
+
+.update-status button {
+  font-size: 0.95em;
+  padding: 0.25em 0.6em;
+}
+
 .update-banner {
   display: flex;
   align-items: center;

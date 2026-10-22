@@ -1,9 +1,14 @@
 import { Injectable, signal } from "@angular/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { Update, check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
 export type UpdateState =
   | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "upToDate" }
+  | { kind: "checkFailed"; message: string }
+  | { kind: "dismissed"; version: string }
   | { kind: "available"; version: string }
   | { kind: "installing"; version: string; percentage: number | null }
   | { kind: "failed"; version: string; message: string };
@@ -15,18 +20,27 @@ export type UpdateState =
 @Injectable({ providedIn: "root" })
 export class UpdateService {
   readonly state = signal<UpdateState>({ kind: "idle" });
+  /** The running app's version (from package.json via tauri.conf.json). */
+  readonly currentVersion = signal<string | null>(null);
 
   private update: Update | null = null;
 
-  /** Quietly does nothing when offline or no release is published yet. */
+  /** Fails into a "checkFailed" state (e.g. offline) rather than throwing. */
   async checkForUpdate(): Promise<void> {
+    if (this.currentVersion() === null) {
+      this.currentVersion.set(await getVersion().catch(() => null));
+    }
+    this.state.set({ kind: "checking" });
     try {
       this.update = await check();
     } catch (err) {
       console.warn("Update check failed:", err);
+      this.state.set({ kind: "checkFailed", message: String(err) });
       return;
     }
-    if (this.update) this.state.set({ kind: "available", version: this.update.version });
+    this.state.set(
+      this.update ? { kind: "available", version: this.update.version } : { kind: "upToDate" },
+    );
   }
 
   /** Downloads and installs the update, then restarts the app. */
@@ -55,7 +69,13 @@ export class UpdateService {
     }
   }
 
+  /** Hides the banner; a pending update stays installable from the header. */
   dismiss(): void {
-    this.state.set({ kind: "idle" });
+    const state = this.state();
+    if (state.kind === "available") {
+      this.state.set({ kind: "dismissed", version: state.version });
+    } else {
+      this.state.set({ kind: "idle" });
+    }
   }
 }

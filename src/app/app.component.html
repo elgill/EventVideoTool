@@ -1,8 +1,13 @@
 <div class="app-shell">
   <header class="app-header">
-    <h1>Event Video Tool</h1>
+    <h1>
+      Event Video Tool
+      @if (updates.currentVersion(); as version) {
+        <span class="app-version">v{{ version }}</span>
+      }
+    </h1>
     @let update = updates.state();
-    @if (update.kind !== "idle") {
+    @if (update.kind === "available" || update.kind === "installing" || update.kind === "failed") {
       <div class="update-banner" [class.failed]="update.kind === 'failed'" role="status">
         @if (update.kind === "available") {
           <span>Version {{ update.version }} is available.</span>
@@ -20,6 +25,36 @@
         } @else {
           <span [title]="update.message">Update to {{ update.version }} failed.</span>
           <button type="button" class="ghost-btn" (click)="updates.dismiss()">Dismiss</button>
+        }
+      </div>
+    } @else {
+      <div class="update-status" role="status">
+        @switch (update.kind) {
+          @case ("checking") {
+            <span>Checking for updates&hellip;</span>
+          }
+          @case ("upToDate") {
+            <span>&#10003; Up to date</span>
+          }
+          @case ("checkFailed") {
+            <span [title]="update.message">Couldn't check for updates</span>
+          }
+          @case ("dismissed") {
+            <span>Version {{ update.version }} is available</span>
+            <button type="button" class="ghost-btn" [disabled]="busy()" (click)="updates.install()">
+              Install &amp; restart
+            </button>
+          }
+        }
+        @if (update.kind !== "dismissed") {
+          <button
+            type="button"
+            class="ghost-btn"
+            [disabled]="update.kind === 'checking'"
+            (click)="updates.checkForUpdate()"
+          >
+            Check for updates
+          </button>
         }
       </div>
     }
